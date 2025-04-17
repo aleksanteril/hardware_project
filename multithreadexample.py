@@ -10,7 +10,8 @@ class Screen(SSD1306_I2C):
             i2c = I2C(1, sda=Pin(da), scl=Pin(cl), freq=400000)
             self.width = 128
             self.heigth = 64
-            self.hr_px_coords(0,0)
+            self.hr_plot_pos(0,0)
+            self.hr_bpm(0)
             self.y_old = 0
             super().__init__(self.width, self.heigth, i2c)
             
@@ -20,15 +21,18 @@ class Screen(SSD1306_I2C):
             self.y_old = self.y
             return
 
-      def hr_px_coords(self, x, y):
+      def hr_plot_pos(self, x, y):
             self.x = x
             self.y = y
             return
       
-      def draw_bpm(self, bpm):
-            text = f"avg BPM: {bpm:.0f}"
+      def hr_bpm(self, bpm):
+            self.bpm = bpm
+            return
+      
+      def draw_bpm(self):
             self.fill_rect(0, 32, 128, 32, 0)
-            self.text(text, 0, 48, 1)
+            self.text(f"avg BPM: {self.bpm:.0f}", 0, 48, 1)
             return
             
 class Isr_adc:
@@ -44,7 +48,10 @@ class Isr_adc:
 #Core1 refreshes the screen for drawing
 def core1_thread():
       while True:
+            screen.draw_bpm()
+            screen.draw_hr()
             screen.show()
+
 
 
 
@@ -57,7 +64,7 @@ def calculate_scale_factor(list):
 
 def scale(sample, max_list, scale_fc):
       pos = abs((sample - max_list) * scale_fc)
-      calc_y = int(round(pos))
+      calc_y = round(pos)
       return calc_y
 
 def calculate_bpm():
@@ -82,8 +89,7 @@ def find_ppi(sample):
       global peak_time
       global prev_peak_time
 
-      threshold = (sum(samples) / len(samples))*MARGIN*1.08
-
+      threshold = (sum(samples) / len(samples))*1.05
       #If signal under threshold and no new peak, ignore and get new sample
       if sample < threshold and not edge:
             return
@@ -93,13 +99,11 @@ def find_ppi(sample):
             peak_time = time.ticks_ms()
             ppi_filter(time.ticks_diff(peak_time, prev_peak_time))
             edge = True
-            MARGIN = 0.95
             return
 
       #If under threshold and new rise was detected, do calculations and reset
       elif sample < threshold and edge:
             prev_peak_time = peak_time
-            MARGIN = 1
             edge = False
             return
 
@@ -111,37 +115,37 @@ def core0_thread():
       global scale_fc
       global sample_num
 
-      #When 250 samples has been read, calculate the new scale factor to draw with the old 250
-      if sample_num % 250 == 0:
-            max_list, min_list, scale_fc = calculate_scale_factor(samples[:250])
-
       #Take interval amount of samples, replace old samples to keep the list between 250.
       if data.empty():
             return
       sample = data.get()
       sample_num += 1
 
+      #When 250 samples has been read, calculate the new scale factor to draw with the old 250
+      if sample_num % 250 == 0:
+            max_list, min_list, scale_fc = calculate_scale_factor(samples[:250])
+
       del samples[0]
       samples.append(sample)
       
       find_ppi(sample)
-      avg_bpm = calculate_bpm()
-      screen.draw_bpm(avg_bpm)
 
       if sample_num % 5 != 0:
             return
       #Calculate and draw every 5th sample and scale to plot
       calc_y = scale(sample, max_list, scale_fc)
       calc_y = min(max(0, calc_y), 31) #Limit y between screen
+      screen.hr_plot_pos(x, calc_y)
       
-      screen.hr_px_coords(x, calc_y)
-      screen.draw_hr()
+      avg_bpm = calculate_bpm()
+      screen.hr_bpm(avg_bpm)
+
       x += 1
       if x > screen.width:
             x = 0
 
     
-data = Fifo(50)
+data = Fifo(20)
 screen = Screen(14, 15)
 adc = Isr_adc(26, data)
 
