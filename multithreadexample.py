@@ -26,7 +26,7 @@ class Screen(SSD1306_I2C):
             return
       
       def draw_bpm(self, bpm):
-            text = f"AVG BPM: {bpm:.0f}"
+            text = f"avg BPM: {bpm:.0f}"
             self.fill_rect(0, 32, 128, 32, 0)
             self.text(text, 0, 48, 1)
             return
@@ -68,7 +68,7 @@ def calculate_bpm():
       avg_bpm = 60000 / avg_ppi
       return avg_bpm
 
-def raw_filter(ppi):
+def ppi_filter(ppi):
       if ppi > 2000 or ppi < 250:
             return
       PPI.append(ppi)
@@ -82,7 +82,7 @@ def find_ppi(sample):
       global peak_time
       global prev_peak_time
 
-      threshold = (sum(samples) / len(samples))*MARGIN*1.05
+      threshold = (sum(samples) / len(samples))*MARGIN*1.08
 
       #If signal under threshold and no new peak, ignore and get new sample
       if sample < threshold and not edge:
@@ -91,7 +91,7 @@ def find_ppi(sample):
       #Rising edge detected
       elif sample > threshold and not edge:
             peak_time = time.ticks_ms()
-            raw_filter(time.ticks_diff(peak_time, prev_peak_time))
+            ppi_filter(time.ticks_diff(peak_time, prev_peak_time))
             edge = True
             MARGIN = 0.95
             return
@@ -165,7 +165,6 @@ PPI = []
 peak_time = time.ticks_ms()
 prev_peak_time = time.ticks_ms()
 
-
 #Get 500 samples for the threshold, and also scaling
 while len(samples) < 500:
       if data.empty():
@@ -173,7 +172,6 @@ while len(samples) < 500:
       samples.append(data.get())
       sample_num += 1
       
-
 second_thread = _thread.start_new_thread(core1_thread, ())
 while True:
       core0_thread()
