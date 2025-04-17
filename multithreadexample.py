@@ -59,11 +59,11 @@ def calculate_scale_factor(list):
       #Calculate scaling factor
       max_list = max(samples)
       min_list = min(samples)
-      scale_fc = (32) / (max_list - min_list)
+      scale_fc = 32 / (max_list - min_list)
       return max_list, min_list, scale_fc
 
 def scale(sample, max_list, scale_fc):
-      pos = abs((sample - max_list) * scale_fc)
+      pos = (sample - max_list) * scale_fc * -1
       calc_y = round(pos)
       return calc_y
 
@@ -84,7 +84,6 @@ def ppi_filter(ppi):
       return
 
 def find_ppi(sample):
-      global MARGIN
       global edge
       global peak_time
       global prev_peak_time
@@ -145,7 +144,7 @@ def core0_thread():
             x = 0
 
     
-data = Fifo(20)
+data = Fifo(3)
 screen = Screen(14, 15)
 adc = Isr_adc(26, data)
 
@@ -163,7 +162,6 @@ x = 0
 samples = []
 
 #For hr reading
-MARGIN = 1
 edge = False
 PPI = []
 peak_time = time.ticks_ms()
