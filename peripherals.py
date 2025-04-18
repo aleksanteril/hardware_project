@@ -1,10 +1,15 @@
-'''This file contains all the I/O hardware peripherals for the project'''
+
 from fifo import Fifo
 from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
-import time
+from time import ticks_diff, ticks_ms, sleep_ms
+from piotimer import Piotimer
 
+'''Allocate memory for irq handler exceptions'''
+import micropython
+micropython.alloc_emergency_exception_buf(200)
 
+'''This file contains all the I/O hardware peripherals for the project and their interfaces'''
 class Screen(SSD1306_I2C):
       def __init__(self, da, cl):
             i2c = I2C(1, sda=Pin(da), scl=Pin(cl), freq=400000)
@@ -41,7 +46,15 @@ class Isr_fifo(Fifo):
             self.av = ADC(adc_pin)
             super().__init__(size)
       
-      #Piotimer this 250hz
+      def init_timer(self, hz=250):
+            self.tmr = Piotimer(mode=Piotimer.PERIODIC, freq=hz, callback=self.handler)
+            return
+
+      def deinit_timer(self):
+            self.tmr.deinit()
+            return
+
+      #Triggered only by the piotimer irq
       def handler(self, tid):
             self.put(self.av.read_u16())
             return
@@ -55,27 +68,17 @@ class Rotary:
             self.pin_nr = signal
             self.enable()
     
-    #Enable irq call function
+      #Enable irq call function
       def enable(self):
             self.clock.irq(self.handler, Pin.IRQ_FALLING, hard = True)
-            self.enabled = True
             return
     
-    #Disable irq call function
+      #Disable irq call function
       def disable(self):
             self.clock.irq(handler=None)
-            self.enabled = False
-            return
-        
-    #Toggle between irq on/off
-      def toggle(self):
-            if self.enabled:
-                  self.disable()
-            else:
-                  self.enable()
             return
 
-    #Accessed with interrupt request only! 
+      #Accessed with interrupt request only! 
       def handler(self, pin):
             self.fifo.put(self.pin_nr) #To mark the next signal (pin_nr),(turn)
             if self.signal():
@@ -86,38 +89,38 @@ class Rotary:
       
 
 class Button:
-    def __init__(self, id, fifo, DEBOUNCE=200):
-        self.button = Pin(id, Pin.IN, Pin.PULL_UP)
-        self.debounce = DEBOUNCE
-        self.fifo = fifo
-        self.pin_nr = id
-        self.enable()
-        self.tick2 = time.ticks_ms()
-        self.diff = 0
+      def __init__(self, id, fifo, DEBOUNCE=250):
+            self.button = Pin(id, Pin.IN, Pin.PULL_UP)
+            self.debounce = DEBOUNCE
+            self.fifo = fifo
+            self.pin_nr = id
+            self.tick1, self.tick2 = 0, ticks_ms()
     
-    #For polling holding down
-    def hold(self):
-        return not self.button.value()
+      #For polling holding down
+      def hold(self):
+            return not self.button.value()
     
-    #For polling a press once
-    def pressed(self):
-        if self.button.value():
-            return False
-        time.sleep_ms(50)
-        return self.button.value()
+      #For polling a press once
+      def pressed(self):
+            if self.button.value():
+                  return False
+            sleep_ms(50)
+            return self.button.value()
     
-    #Disable interrupt
-    def disable(self):
-        self.button.irq(handler=None)
-        return
+      #Disable interrupt
+      def disable_irq(self):
+            self.button.irq(handler=None)
+            return
     
-    #Enable interrupt
-    def enable(self):
-        self.button.irq(self.handler, Pin.IRQ_FALLING, hard=True)
-        return
+      #Enable interrupt
+      def enable_irq(self):
+            self.button.irq(self.handler, Pin.IRQ_FALLING, hard=True)
+            return
     
-    #Accessed only through interrupt request!!!
-    def handler(self, pin):
-        if time.ticks_diff(time.ticks_ms(), self.tick2) > self.debounce:
-            self.fifo.put(self.pin_nr)
-        self.tick2 = time.ticks_ms()
+      #Accessed only through interrupt request!!!
+      def handler(self, pin):
+            self.tick1 = ticks_ms()
+            if ticks_diff(self.tick1, self.tick2) > self.debounce:
+                  self.fifo.put(self.pin_nr)
+            self.tick2 = self.tick1
+            return

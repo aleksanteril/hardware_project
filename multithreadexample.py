@@ -1,4 +1,3 @@
-from piotimer import Piotimer
 import time, _thread
 from peripherals import Screen, Isr_fifo
 
@@ -121,7 +120,7 @@ screen = Screen(14, 15)
 adc = Isr_fifo(10, 26) #ADC has its own inbuilt fifo for writing and reading from
 
 '''Activate a 250hz timer for the heart rate sensor.'''
-tmr = Piotimer(mode=Piotimer.PERIODIC, freq=250, callback=adc.handler)
+adc.init_timer(250)
 
 
 #For drawing and peak algorithm threshold 500 len
