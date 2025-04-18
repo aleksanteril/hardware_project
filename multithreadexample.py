@@ -1,9 +1,10 @@
 from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
-import _thread
 from fifo import Fifo
 from piotimer import Piotimer
-import time
+import time, _thread
+
+lock = _thread.allocate_lock()
 
 class Screen(SSD1306_I2C):
       def __init__(self, da, cl):
@@ -32,7 +33,7 @@ class Screen(SSD1306_I2C):
       
       def draw_bpm(self):
             self.fill_rect(0, 32, 128, 32, 0)
-            self.text(f"avg BPM: {self.bpm:.0f}", 0, 48, 1)
+            self.text(f"avg BPM: {self.bpm}", 0, 48, 1)
             return
             
 class Isr_adc:
@@ -45,14 +46,14 @@ class Isr_adc:
             self.fifo.put(self.av.read_u16())
             return
 
-#Core1 refreshes the screen for drawing
+
+#Core1 refreshes the screen for drawing, and draws framebuffer
 def core1_thread():
-      while True:
+      global measuring
+      while measuring:
             screen.draw_bpm()
             screen.draw_hr()
             screen.show()
-
-
 
 
 def calculate_scale_factor(list):
@@ -60,20 +61,20 @@ def calculate_scale_factor(list):
       max_list = max(samples)
       min_list = min(samples)
       scale_fc = 32 / (max_list - min_list)
-      return max_list, min_list, scale_fc
+      return max_list, scale_fc
 
 def scale(sample, max_list, scale_fc):
       pos = (sample - max_list) * scale_fc * -1
-      calc_y = round(pos)
-      return calc_y
+      y = round(pos)
+      return y
 
 def calculate_bpm():
-      if len(PPI) < 10:
-            return 0
+      if len(PPI) < 5:
+            return '--'
       #Avg bpm calculation
       avg_ppi = sum(PPI) / len(PPI)
       avg_bpm = 60000 / avg_ppi
-      return avg_bpm
+      return round(avg_bpm)
 
 def ppi_filter(ppi):
       if ppi > 2000 or ppi < 250:
@@ -83,97 +84,90 @@ def ppi_filter(ppi):
             del PPI[0]
       return
 
-def find_ppi(sample):
-      global edge
-      global peak_time
-      global prev_peak_time
-
+def find_ppi(edge, peak_time, prev_peak_time):
       threshold = (sum(samples) / len(samples))*1.05
-      #If signal under threshold and no new peak, ignore and get new sample
-      if sample < threshold and not edge:
-            return
-
       #Rising edge detected
-      elif sample > threshold and not edge:
+      if samples[-1] > threshold and not edge:
             peak_time = time.ticks_ms()
             ppi_filter(time.ticks_diff(peak_time, prev_peak_time))
             edge = True
-            return
-
+            return edge, peak_time, prev_peak_time
       #If under threshold and new rise was detected, do calculations and reset
-      elif sample < threshold and edge:
+      elif samples[-1] < threshold and edge:
             prev_peak_time = peak_time
             edge = False
-            return
+            return edge, peak_time, prev_peak_time
+      else:
+            return edge, peak_time, prev_peak_time
 
-
+#Core0 does reading values, finding peaks, calculating the plotting scale, calculating avg bpm
 def core0_thread():
-      global x
-      global max_list
-      global min_list
-      global scale_fc
-      global sample_num
+      global measuring
 
-      #Take interval amount of samples, replace old samples to keep the list between 250.
-      if data.empty():
-            return
-      sample = data.get()
-      sample_num += 1
+      #For peak find algorithm
+      edge = False
+      peak_time = time.ticks_ms()
+      prev_peak_time = time.ticks_ms()
 
-      #When 250 samples has been read, calculate the new scale factor to draw with the old 250
-      if sample_num % 250 == 0:
-            max_list, min_list, scale_fc = calculate_scale_factor(samples[:250])
+      #For plotting the screen
+      max_list = 0
+      scale_fc = 0
+      sample_num = 0
+      x = 0
 
-      del samples[0]
-      samples.append(sample)
-      
-      find_ppi(sample)
+      #Get 500 samples for the threshold, and also scaling
+      while len(samples) < 500:
+            if data.empty():
+                  continue
+            samples.append(data.get())
+            sample_num += 1
 
-      if sample_num % 5 != 0:
-            return
-      #Calculate and draw every 5th sample and scale to plot
-      calc_y = scale(sample, max_list, scale_fc)
-      calc_y = min(max(0, calc_y), 31) #Limit y between screen
-      screen.hr_plot_pos(x, calc_y)
-      
-      avg_bpm = calculate_bpm()
-      screen.hr_bpm(avg_bpm)
+      while measuring:
+            #Take interval amount of samples, replace old samples to keep the list between 250.
+            if data.empty():
+                  continue
+            sample = data.get()
+            sample_num += 1
 
-      x += 1
-      if x > screen.width:
-            x = 0
+            #When 250 samples has been read, calculate the new scale factor to draw with the old 250
+            if sample_num % 250 == 0:
+                  #gc.collect()
+                  max_list, scale_fc = calculate_scale_factor(samples[:250])
+
+            del samples[0]
+            samples.append(sample)
+
+            edge, peak_time, prev_peak_time = find_ppi(edge, peak_time, prev_peak_time)
+
+            if sample_num % 5 != 0:
+                  continue
+            #Calculate and draw every 5th sample and scale to plot
+            calc_y = scale(sample, max_list, scale_fc)
+            calc_y = min(max(0, calc_y), 31) #Limit y between screen
+            avg_bpm = calculate_bpm()
+
+            with lock:
+                  screen.hr_plot_pos(x, calc_y)
+                  screen.hr_bpm(avg_bpm)
+
+            x += 1
+            if x > screen.width:
+                  x = 0
 
     
-data = Fifo(3)
+data = Fifo(30)
 screen = Screen(14, 15)
 adc = Isr_adc(26, data)
 
 ''' Sample rate is 250 samples per second'''
 tmr = Piotimer(mode=Piotimer.PERIODIC, freq=250, callback=adc.handler)
 
-#For drawing the screen
-max_list = 0
-min_list = 0
-scale_fc = 0
-sample_num = 0
-x = 0
 
-#For drawing and hr reading
+#For drawing and peak algorithm threshold 500 len
 samples = []
-
-#For hr reading
-edge = False
+#For the found ppi values, max len 10
 PPI = []
-peak_time = time.ticks_ms()
-prev_peak_time = time.ticks_ms()
 
-#Get 500 samples for the threshold, and also scaling
-while len(samples) < 500:
-      if data.empty():
-            continue
-      samples.append(data.get())
-      sample_num += 1
-      
+measuring = True
 second_thread = _thread.start_new_thread(core1_thread, ())
-while True:
-      core0_thread()
+core0_thread()
