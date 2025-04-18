@@ -1,51 +1,8 @@
-from machine import Pin, I2C, ADC
-from ssd1306 import SSD1306_I2C
-from fifo import Fifo
 from piotimer import Piotimer
 import time, _thread
+from peripherals import Screen, Isr_fifo
 
 lock = _thread.allocate_lock()
-
-class Screen(SSD1306_I2C):
-      def __init__(self, da, cl):
-            i2c = I2C(1, sda=Pin(da), scl=Pin(cl), freq=400000)
-            self.width = 128
-            self.heigth = 64
-            self.hr_plot_pos(0,0)
-            self.hr_bpm(0)
-            self.y_old = 0
-            super().__init__(self.width, self.heigth, i2c)
-            
-      def draw_hr(self):
-            self.fill_rect(self.x, 0, 12, 32, 0)
-            self.line(self.x-1, self.y_old, self.x, self.y, 1)
-            self.y_old = self.y
-            return
-
-      def hr_plot_pos(self, x, y):
-            self.x = x
-            self.y = y
-            return
-      
-      def hr_bpm(self, bpm):
-            self.bpm = bpm
-            return
-      
-      def draw_bpm(self):
-            self.fill_rect(0, 32, 128, 32, 0)
-            self.text(f"avg BPM: {self.bpm}", 0, 48, 1)
-            return
-            
-class Isr_fifo(Fifo):
-      def __init__(self, size, adc_pin):
-            self.av = ADC(adc_pin)
-            super().__init__(3)
-      
-      #Piotimer this 250hz
-      def handler(self, tid):
-            self.put(self.av.read_u16())
-            return
-
 
 #Core1 draws the values to the framebuffer and then displays on the screen
 def core1_thread():
@@ -159,10 +116,11 @@ def core0_thread(MAX_PPI_SIZE=10):
             if x > screen.width:
                   x = 0
 
-    
+
 screen = Screen(14, 15)
-adc = Isr_fifo(3, 26) #Has an inbuilt fifo
-''' Sample rate is 250 samples per second'''
+adc = Isr_fifo(10, 26) #ADC has its own inbuilt fifo for writing and reading from
+
+'''Activate a 250hz timer for the heart rate sensor.'''
 tmr = Piotimer(mode=Piotimer.PERIODIC, freq=250, callback=adc.handler)
 
 
