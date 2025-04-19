@@ -47,7 +47,7 @@ class Isr_fifo(Fifo):
             super().__init__(size)
       
       def init_timer(self, hz=250):
-            self.tmr = Piotimer(mode=Piotimer.PERIODIC, freq=hz, callback=self.handler)
+            self.tmr = Piotimer(mode=Piotimer.PERIODIC, freq=hz, callback=self._handler)
             return
 
       def deinit_timer(self):
@@ -55,7 +55,7 @@ class Isr_fifo(Fifo):
             return
 
       #Triggered only by the piotimer irq
-      def handler(self, tid):
+      def _handler(self, tid):
             self.put(self.av.read_u16())
             return
 
@@ -70,7 +70,7 @@ class Rotary:
     
       #Enable irq call function
       def enable(self):
-            self.clock.irq(self.handler, Pin.IRQ_FALLING, hard = True)
+            self.clock.irq(self._handler, Pin.IRQ_FALLING, hard=True)
             return
     
       #Disable irq call function
@@ -79,7 +79,7 @@ class Rotary:
             return
 
       #Accessed with interrupt request only! 
-      def handler(self, pin):
+      def _handler(self, pin):
             self.fifo.put(self.pin_nr) #To mark the next signal (pin_nr),(turn)
             if self.signal():
                   self.fifo.put(1)
@@ -114,11 +114,11 @@ class Button:
     
       #Enable interrupt
       def enable_irq(self):
-            self.button.irq(self.handler, Pin.IRQ_FALLING, hard=True)
+            self.button.irq(self._handler, Pin.IRQ_FALLING, hard=True)
             return
     
       #Accessed only through interrupt request!!!
-      def handler(self, pin):
+      def _handler(self, pin):
             self.tick1 = ticks_ms()
             if ticks_diff(self.tick1, self.tick2) > self.debounce:
                   self.fifo.put(self.pin_nr)

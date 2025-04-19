@@ -21,41 +21,40 @@ def calculate_plotting_values(list):
 
 def plot_sample(sample, max_list, scale_fc):
       pos = (sample - max_list) * scale_fc * -1
-      y = round(pos)
-      return y
+      return round(pos)
 
-def calculate_bpm():
+def calculate_bpm(PPI):
       if len(PPI) < 5:
             return 0
       avg_ppi = sum(PPI) / len(PPI)
-      avg_bpm = round(60000 / avg_ppi)
-      return avg_bpm
+      bpm = round(60000 / avg_ppi)
+      return bpm
 
-def accept_ppi_to_list(ppi):
-      if ppi > 2000 or ppi < 250:
-            return
-      PPI.append(ppi)
+def accept_ppi_to_list(ppi, PPI):
+      if ppi < 250 < 2000:
+            PPI.append(ppi)
       return
 
 def find_ppi(edge, peak_time, prev_peak_time):
       threshold = (sum(samples) / len(samples))*1.05
+      sample = samples[-1]
 
       #Rising edge detected, appends to PPI list if the value is acceptable
-      if samples[-1] > threshold and not edge:
+      if sample > threshold and not edge:
             peak_time = time.ticks_ms()
             edge = True
-            accept_ppi_to_list(time.ticks_diff(peak_time, prev_peak_time))
+            accept_ppi_to_list(time.ticks_diff(peak_time, prev_peak_time), PPI)
             return edge, peak_time, prev_peak_time
       
       #Falling under threshold with detection flag on, reset.
-      elif samples[-1] < threshold and edge:
+      elif sample < threshold and edge:
             prev_peak_time = peak_time
             edge = False
             return edge, peak_time, prev_peak_time
-      else:
-            return edge, peak_time, prev_peak_time
+      
+      return edge, peak_time, prev_peak_time
 
-def read_sample_to_list():
+def read_sample_to_list(adc, samples):
       if adc.empty():
             return False
       samples.append(adc.get())
@@ -72,20 +71,16 @@ def core0_thread(MAX_PPI_SIZE=10):
       prev_peak_time = time.ticks_ms()
 
       #For plotting the screen
-      max_list = 0
-      scale_fc = 0
-      sample_num = 0
-      x = 0
+      max_list, scale_fc, sample_num, x = 0, 0, 0, 0
 
       #Get 500 samples at start for the threshold, and also scaling
       while len(samples) < 500:
-            if not read_sample_to_list():
-                  continue
-            sample_num += 1
+            if read_sample_to_list(adc, samples):
+                  sample_num += 1
 
       while meas_hr_active:
             #Read a sample from the fifo, continue back if no sample was read
-            if not read_sample_to_list():
+            if not read_sample_to_list(adc, samples):
                   continue
             sample_num += 1
             del samples[0]
@@ -104,29 +99,23 @@ def core0_thread(MAX_PPI_SIZE=10):
                   continue
             y = plot_sample(samples[-1], max_list, scale_fc)
             y = min(max(0, y), 31)
-            avg_bpm = calculate_bpm()
+            avg_bpm = calculate_bpm(PPI)
 
             with lock:
                   screen.hr_plot_pos(x, y)
                   screen.hr_bpm(avg_bpm)
 
-            #Increment the x pos, by 1
-            x += 1
-            if x > screen.width:
-                  x = 0
+            #Keep x running between 0-127
+            x = (x + 1) % screen.width
 
 
 screen = Screen(14, 15)
-adc = Isr_fifo(10, 26) #ADC has its own inbuilt fifo for writing and reading from
-
-'''Activate a 250hz timer for the heart rate sensor.'''
+adc = Isr_fifo(10, 26)
 adc.init_timer(250)
 
 
-#For drawing and peak algorithm threshold 500 len
-samples = []
-#For the found ppi values
-PPI = []
+#Samples: for drawing and threshold calculating
+samples, PPI = [], []
 
 meas_hr_active = True
 second_thread = _thread.start_new_thread(core1_thread, ())
