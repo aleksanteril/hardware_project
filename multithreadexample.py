@@ -31,7 +31,7 @@ def calculate_bpm(PPI):
       return bpm
 
 def accept_ppi_to_list(ppi, PPI):
-      if ppi < 250 < 2000:
+      if 250 < ppi < 2000:
             PPI.append(ppi)
       return
 
