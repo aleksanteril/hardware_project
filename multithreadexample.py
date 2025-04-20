@@ -65,7 +65,7 @@ def core0_thread(MAX_PPI_SIZE=10):
       prev_peak_time = time.ticks_ms()
 
       #For plotting the screen
-      max_list, scale_fc, sample_num, x = 0, 0, 0, 0
+      max_list, scale_fc, sample_num, x, bpm = 0, 0, 0, 0, 0
 
       #Get 500 samples at start for the threshold, and also scaling
       while len(samples) < 500:
@@ -93,7 +93,8 @@ def core0_thread(MAX_PPI_SIZE=10):
                   continue
             y = plot_sample(samples[-1], max_list, scale_fc)
             y = min(max(0, y), 31)
-            bpm = round(mean_hr(PPI))
+            if PPI:
+                  bpm = round(mean_hr(PPI))
 
             with lock:
                   screen.hr_plot_pos(x, y)
@@ -109,7 +110,7 @@ adc.init_timer(250)
 
 
 #Samples: for drawing and threshold calculating
-samples, PPI = [], [0, 0]
+samples, PPI = [], []
 
 meas_hr_active = True
 second_thread = _thread.start_new_thread(core1_thread, ())
