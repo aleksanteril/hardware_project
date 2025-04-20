@@ -48,7 +48,6 @@ class History:
                   print('Can not read data')
             return data
 
-
       #Read contents of the /history folder
       def contents(self) -> list:
             return os.listdir(f'./{self._dir}')
