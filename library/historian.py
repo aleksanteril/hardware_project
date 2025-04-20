@@ -42,9 +42,9 @@ class History:
             try:
                   with open(f'./{self._dir}/{file}', 'r') as f:
                         data = ujson.load(f)
-            except OSError as e:
+            except OSError:
                   print('File not found')
-            except ValueError as e:
+            except ValueError:
                   print('Can not read data')
             return data
 
