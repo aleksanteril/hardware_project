@@ -1,4 +1,5 @@
 import time, _thread
+from analysis import mean_hr
 from peripherals import Screen, Isr_fifo
 
 lock = _thread.allocate_lock()
@@ -22,13 +23,6 @@ def calculate_plotting_values(list):
 def plot_sample(sample, max_list, scale_fc):
       pos = (sample - max_list) * scale_fc * -1
       return round(pos)
-
-def calculate_bpm(PPI):
-      if len(PPI) < 5:
-            return 0
-      avg_ppi = sum(PPI) / len(PPI)
-      bpm = round(60000 / avg_ppi)
-      return bpm
 
 def accept_ppi_to_list(ppi, PPI):
       if 250 < ppi < 2000:
@@ -99,11 +93,11 @@ def core0_thread(MAX_PPI_SIZE=10):
                   continue
             y = plot_sample(samples[-1], max_list, scale_fc)
             y = min(max(0, y), 31)
-            avg_bpm = calculate_bpm(PPI)
+            bpm = round(mean_hr(PPI))
 
             with lock:
                   screen.hr_plot_pos(x, y)
-                  screen.hr_bpm(avg_bpm)
+                  screen.hr_bpm(bpm)
 
             #Keep x running between 0-127
             x = (x + 1) % screen.width
@@ -115,7 +109,7 @@ adc.init_timer(250)
 
 
 #Samples: for drawing and threshold calculating
-samples, PPI = [], []
+samples, PPI = [], [0, 0]
 
 meas_hr_active = True
 second_thread = _thread.start_new_thread(core1_thread, ())
