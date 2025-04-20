@@ -1,4 +1,4 @@
-import os, json, random
+import os, ujson
 from time import localtime, mktime
 
 '''This class controls the /history folder and its measurement history contents, 
@@ -31,7 +31,7 @@ class History:
             file = f'{type}_{date}'
             try:
                   with open(f'./{self._dir}/{file}', 'x') as f:
-                        json.dump(data, f)
+                        ujson.dump(data, f)
             except OSError or FileExistsError:
                   print('File already exists')
             return
@@ -41,7 +41,7 @@ class History:
             data = None
             try:
                   with open(f'./{self._dir}/{file}', 'r') as f:
-                        data = json.load(f)
+                        data = ujson.load(f)
             except OSError as e:
                   print('File not found')
             except ValueError as e:
