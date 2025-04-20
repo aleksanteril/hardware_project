@@ -1,4 +1,4 @@
-import os, json
+import os, json, random
 from time import localtime, mktime
 
 '''This class controls the /history folder and its measurement history contents, 
@@ -24,31 +24,46 @@ class History:
             return
 
       #Create and save a new measurement.txt file
-      def write(self, file, data):
+      def write(self, type, data):
             self._folder_manager()
             date = mktime(localtime())
             #File name is formatted: name_secondsfrom1stjan2000
-            file = f'{file}_{date}'
-            with open(f'./{self._dir}/{file}', 'w') as f:
-                  json.dump(data, f, (',', ':'))
+            file = f'{type}_{date}'
+            try:
+                  with open(f'./{self._dir}/{file}', 'x') as f:
+                        json.dump(data, f)
+            except OSError or FileExistsError:
+                  print('File already exists')
             return
 
       #Read data from a chosen measurement.txt file
-      def read(self, file):
-            with open(f'./{self._dir}/{file}', 'r') as f:
-                  data = json.load(f)
+      def read(self, file) -> object:
+            data = None
+            try:
+                  with open(f'./{self._dir}/{file}', 'r') as f:
+                        data = json.load(f)
+            except OSError as e:
+                  print('File not found')
+            except ValueError as e:
+                  print('Can not read data')
             return data
 
 
       #Read contents of the /history folder
-      def contents(self):
+      def contents(self) -> list:
             return os.listdir(f'./{self._dir}')
 
       #Keep the size of the /history folder within limits
       def _folder_manager(self):
             files = os.listdir(f'./{self._dir}')
-            if len(files) < 6:
-                  return
-            pass
-            #Code here to find and delete the oldest file.
-
+            if len(files) > 5:
+                  files.sort()
+                  os.remove(f'./{self._dir}/{files[0]}')
+            return
+      
+      #Empty the folder
+      def empty(self):
+            files = os.listdir(f'./{self._dir}')
+            for file in files:
+                  os.remove(f'./{self._dir}/{file}')
+            return
