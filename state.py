@@ -230,14 +230,15 @@ class PulseCheck:
             self.next_state = initial_state
             self.fifo = fifo
 
+      def get_input(self):
+            if self.fifo.empty():
+                  return None
+            return self.fifo.get()
 
       def execute(self):
             with self.next_state as current_state:
                   while self.next_state == current_state:
-                        if fifo.empty():
-                              input = None
-                        else:
-                              input = fifo.get()
+                        input = self.get_input()
                         self.next_state = current_state.run(input)
 
 
