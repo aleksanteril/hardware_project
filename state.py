@@ -45,7 +45,7 @@ class State:
             self.state = self
             return self
 
-      def doSomething(self):
+      def run(self):
             pass
 
       def __exit__(self, exc_type, exc_value, traceback):
@@ -132,9 +132,9 @@ class MeasureHrState(State, Measure):
             screen.draw_bpm()
             self.x = (self.x + 1) % screen.width
 
-      def doSomething(self, input):
+      def run(self, input):
             self.measure(10)
-            if len(self.samples) >= 500 and self.sample_num % 5 == 0:
+            if len(self.samples) > 250 and self.sample_num % 8 == 0:
                   self.display_data()
             if input == ROT_PUSH:
                   self.state = MenuState()
@@ -147,25 +147,27 @@ class MeasureHrState(State, Measure):
 
 class HrvAnalysisState(State, Measure):
       def __enter__(self):
-            return self
+            return State.__enter__(self)
 
-      def doSomething(self, input):
+      def run(self, input):
             print('Hrv analysis state')
             return MenuState()
 
       def __exit__(self, exc_type, exc_value, traceback):
+            adc.deinit_timer()
             pass
 
 
 class KubiosState(State, Measure):
       def __enter__(self):
-            return self
+            return State.__enter__(self)
 
-      def doSomething(self, input):
+      def run(self, input):
             print('Kubios analysis state')
             return MenuState()
 
       def __exit__(self, exc_type, exc_value, traceback):
+            adc.deinit_timer()
             pass
 
 #Special case where init is used to get the file to be read
@@ -179,13 +181,10 @@ class ReadHistoryState(State):
             screen.draw_items(data, offset=0)
             return State.__enter__(self)
 
-      def doSomething(self, input):
+      def run(self, input):
             if input == ROT_PUSH:
                   self.state = MenuState()
             return self.state
-
-      def __exit__(self, exc_type, exc_value, traceback):
-            pass
 
 
 class HistoryState(State):
@@ -196,8 +195,7 @@ class HistoryState(State):
             screen.draw_cursor(self.select)
             return State.__enter__(self)
 
-      def doSomething(self, input):
-            
+      def run(self, input):
             if input == ROT_PUSH:
                   self.state = ReadHistoryState(self.items[self.select])
             elif input == ROTB:
@@ -205,9 +203,6 @@ class HistoryState(State):
                   self.select = min(max(0, self.select), len(self.items)-1)
                   screen.draw_cursor(self.select)
             return self.state
-
-      def __exit__(self, exc_type, exc_value, traceback):
-            pass
 
 
 class MenuState(State):
@@ -219,7 +214,7 @@ class MenuState(State):
             screen.draw_cursor(self.select)
             return State.__enter__(self)
 
-      def doSomething(self, input):
+      def run(self, input):
             if input == ROT_PUSH:
                   self.state = self.states[self.select]()
             elif input == ROTB:
@@ -228,15 +223,13 @@ class MenuState(State):
                   screen.draw_cursor(self.select)
             return self.state
 
-      def __exit__(self, exc_type, exc_value, traceback):
-            print('Exiting menu state')
-
 
 #The runner
 class PulseCheck:
       def __init__(self, initial_state, fifo):
             self.next_state = initial_state
             self.fifo = fifo
+
 
       def execute(self):
             with self.next_state as current_state:
@@ -245,7 +238,7 @@ class PulseCheck:
                               input = None
                         else:
                               input = fifo.get()
-                        self.next_state = current_state.doSomething(input)
+                        self.next_state = current_state.run(input)
 
 
 
