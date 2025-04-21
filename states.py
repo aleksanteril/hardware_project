@@ -91,7 +91,6 @@ class Measure:
       def accept_ppi_to_list(self, ppi: int):
             if 250 < ppi < 2000:
                   self.PPI.append(ppi)
-            print(self.PPI)
             return
 
       def find_ppi(self):
@@ -240,11 +239,3 @@ class PulseCheck:
                   while self.next_state == current_state:
                         input = self.get_input()
                         self.next_state = current_state.run(input)
-
-
-
-import _thread
-second_thread = _thread.start_new_thread(core1_thread, ())
-machine_ = PulseCheck()
-while True:
-      machine_.execute()
