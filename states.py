@@ -1,8 +1,10 @@
 from fifo import Fifo
 from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
-import _thread, time, analysis, utility
+import time, analysis, utility
 from historian import History
+'''This file contains the state machines nodes that are running on the PulseCheck'''
+
 
 #Pin declarations
 ROTA = 10
@@ -29,15 +31,12 @@ screen = Screen(OLED_DA, OLED_CLK)
 led1 = Led(LED1)
 adc = Isr_fifo(10, ADC)
 
-#Lock for multicore writing
-lock = _thread.allocate_lock()
-
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
       while True:
             screen.show()
 
-
+#Template state class
 class State:
       def __enter__(self):
             global ROTB
@@ -51,7 +50,7 @@ class State:
       def __exit__(self, exc_type, exc_value, traceback):
             pass
 
-
+#Class for states with measuring functionality
 class Measure:
       def __init__(self):
             #For peak find algorithm
@@ -92,10 +91,11 @@ class Measure:
       def accept_ppi_to_list(self, ppi: int):
             if 250 < ppi < 2000:
                   self.PPI.append(ppi)
+            print(self.PPI)
             return
 
       def find_ppi(self):
-            threshold = (sum(self.samples) / len(self.samples))*1.05
+            threshold = (sum(self.samples) / len(self.samples))*1.02
             sample = self.samples[-1]
 
             #Rising edge detected, appends to PPI list if the value is acceptable
@@ -226,7 +226,7 @@ class MenuState(State):
 
 #The runner
 class PulseCheck:
-      def __init__(self, initial_state, fifo):
+      def __init__(self, fifo=fifo, initial_state=MenuState()):
             self.next_state = initial_state
             self.fifo = fifo
 
@@ -243,7 +243,8 @@ class PulseCheck:
 
 
 
+import _thread
 second_thread = _thread.start_new_thread(core1_thread, ())
-machine_ = PulseCheck(MenuState(), fifo)
+machine_ = PulseCheck()
 while True:
       machine_.execute()
