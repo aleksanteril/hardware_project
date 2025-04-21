@@ -40,7 +40,10 @@ def core1_thread():
 
 class State:
       def __enter__(self):
-            pass
+            global ROTB
+            global ROT_PUSH
+            self.state = self
+            return self
 
       def doSomething(self):
             pass
@@ -61,7 +64,6 @@ class Measure:
             self.samples, self.PPI = [], []
             #Start sample reading
             adc.init_timer(250)
-
 
       def read_sample_to_list(self) -> bool:
             if adc.empty():
@@ -111,14 +113,13 @@ class Measure:
             return
 
 
+##State machine states start here
 class MeasureHrState(State, Measure):
       def __enter__(self):
-            global ROT_PUSH
-            self.state = self
             screen.fill(0)
             self.x, self.y = 0, 0
             self.bpm = 0
-            return self
+            return State.__enter__(self)
 
       def display_data(self):
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
@@ -141,12 +142,10 @@ class MeasureHrState(State, Measure):
 
       def __exit__(self, exc_type, exc_value, traceback):
             adc.deinit_timer()
-            self.samples.clear()
-            self.PPI.clear()
             return
 
 
-class HrvAnalysisState(State):
+class HrvAnalysisState(State, Measure):
       def __enter__(self):
             return self
 
@@ -158,7 +157,7 @@ class HrvAnalysisState(State):
             pass
 
 
-class KubiosState(State):
+class KubiosState(State, Measure):
       def __enter__(self):
             return self
 
@@ -169,19 +168,16 @@ class KubiosState(State):
       def __exit__(self, exc_type, exc_value, traceback):
             pass
 
-
 #Special case where init is used to get the file to be read
 class ReadHistoryState(State):
       def __init__(self, filename):
             self.file = filename
 
       def __enter__(self):
-            global ROT_PUSH
-            self.state = self
             data = historian.read(self.file)
             data = utility.format_data(data)
             screen.draw_items(data, offset=0)
-            return self
+            return State.__enter__(self)
 
       def doSomething(self, input):
             if input == ROT_PUSH:
@@ -194,14 +190,11 @@ class ReadHistoryState(State):
 
 class HistoryState(State):
       def __enter__(self):
-            global ROTB
-            global ROT_PUSH
-            self.state = self
             self.select = 0
             self.items = historian.contents()
             screen.draw_items(utility.format_filenames(self.items))
             screen.draw_cursor(self.select)
-            return self
+            return State.__enter__(self)
 
       def doSomething(self, input):
             
@@ -219,15 +212,12 @@ class HistoryState(State):
 
 class MenuState(State):
       def __enter__(self):
-            global ROTB
-            global ROT_PUSH
-            self.state = self
             self.select = 0
             self.items = ['MEASURE HR', 'HRV ANALYSIS', 'KUBIOS', 'HISTORY']
             self.states = [MeasureHrState, HrvAnalysisState, KubiosState, HistoryState]
             screen.draw_items(self.items)
             screen.draw_cursor(self.select)
-            return self
+            return State.__enter__(self)
 
       def doSomething(self, input):
             if input == ROT_PUSH:
@@ -242,6 +232,7 @@ class MenuState(State):
             print('Exiting menu state')
 
 
+#The runner
 class PulseCheck:
       def __init__(self, initial_state, fifo):
             self.next_state = initial_state
