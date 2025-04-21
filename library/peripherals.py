@@ -39,6 +39,17 @@ class Screen(SSD1306_I2C):
             self.fill_rect(0, 32, 128, 32, 0)
             self.text(f"avg BPM: {self.bpm}", 0, 48, 1)
             return
+      
+      def draw_menu(self, items):
+            for i in range(len(items)):
+                  self.text(items[i], 10, i*10, 1)
+            return
+      
+      def draw_cursor(self, pos):
+            self.fill_rect(0, 0, 10, 63, 0)
+            self.text('>', 0, pos*10, 1)
+            return
+
             
 
 class Isr_fifo(Fifo):
