@@ -75,12 +75,13 @@ class Measure:
 
       def accept_ppi_to_list(self, ppi: int):
             if 250 < ppi < 2000:
-                  screen.text('X', self.x, 12, 1)
+                  screen.text('X', self.x-6, 12, 1)
+                  print(ppi)
                   self.PPI.append(ppi)
             return
 
       def find_ppi(self):
-            threshold = (sum(self.samples) / len(self.samples))*1.02
+            threshold = (sum(self.samples) / len(self.samples))*1.025
             sample = self.samples[-1]
 
             #Rising edge detected, appends to PPI list if the value is acceptable

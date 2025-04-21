@@ -94,7 +94,7 @@ class Measure:
             return
 
       def find_ppi(self):
-            threshold = (sum(self.samples) / len(self.samples))*1.02
+            threshold = (sum(self.samples) / len(self.samples))*1.025
             sample = self.samples[-1]
 
             #Rising edge detected, appends to PPI list if the value is acceptable
