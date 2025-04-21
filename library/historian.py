@@ -24,7 +24,7 @@ class History:
             return
 
       #Create and save a new measurement.txt file
-      def write(self, type, data):
+      def write(self, type: str, data: dict):
             self._folder_manager()
             date = mktime(localtime())
             #File name is formatted: name_secondsfrom1stjan2000
@@ -37,8 +37,7 @@ class History:
             return
 
       #Read data from a chosen measurement.txt file
-      def read(self, file) -> object:
-            data = None
+      def read(self, file: str) -> dict:
             try:
                   with open(f'./{self._dir}/{file}', 'r') as f:
                         data = ujson.load(f)

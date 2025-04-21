@@ -1,6 +1,7 @@
 from fifo import Fifo
 from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
+import _thread
 
 #Pin declarations
 ROTA = 10
@@ -23,12 +24,66 @@ rotary = Rotary(ROTA, ROTB, fifo)
 screen = Screen(OLED_DA, OLED_CLK)
 led1 = Led(LED1)
 
+#Core1 is used for the slow screen function, to help with fifo getting full on core0
+def core1_thread():
+      while True:
+            screen.show()
+
+
 class State:
       def __enter__(self):
             pass
 
       def doSomething(self):
             pass
+
+      def __exit__(self, exc_type, exc_value, traceback):
+            pass
+
+
+class MeasureHrState(State):
+      def __enter__(self):
+            return self
+
+      def doSomething(self, input):
+            print('Measure hr state')
+            return MenuState()
+
+      def __exit__(self, exc_type, exc_value, traceback):
+            pass
+
+
+class HrvAnalysisState(State):
+      def __enter__(self):
+            return self
+
+      def doSomething(self, input):
+            print('Hrv analysis state')
+            return MenuState()
+
+      def __exit__(self, exc_type, exc_value, traceback):
+            pass
+
+
+class KubiosState(State):
+      def __enter__(self):
+            return self
+
+      def doSomething(self, input):
+            print('Kubios analysis state')
+            return MenuState()
+
+      def __exit__(self, exc_type, exc_value, traceback):
+            pass
+
+
+class HistoryState(State):
+      def __enter__(self):
+            return self
+
+      def doSomething(self, input):
+            print('History state')
+            return MenuState()
 
       def __exit__(self, exc_type, exc_value, traceback):
             pass
@@ -41,20 +96,18 @@ class MenuState(State):
             self.state = self
             self.select = 0
             self.items = ['MEASURE HR', 'HRV ANALYSIS', 'KUBIOS', 'HISTORY']
-            #self.states = [MeasureHr, HrvAnalysis, Kubios, History]
+            self.states = [MeasureHrState, HrvAnalysisState, KubiosState, HistoryState]
             screen.draw_menu(self.items)
             screen.draw_cursor(self.select)
-            screen.show()
             return self
 
       def doSomething(self, input):
-            #if input == ROT_PUSH:
-                  #self.state = self.states[self.select]()
+            if input == ROT_PUSH:
+                  self.state = self.states[self.select]()
             if input == ROTB:
                   self.select += fifo.get()
-                  self.select = min(max(0, self.select), len(self.items))
+                  self.select = min(max(0, self.select), len(self.items)-1)
                   screen.draw_cursor(self.select)
-                  screen.show()
             return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
@@ -69,12 +122,17 @@ class PulseCheck:
             self.fifo = fifo
 
       def execute(self):
-            with self.next_state as state:
-                  while self.next_state == state:
-                        self.next_state = state.doSomething(fifo.get())
+            with self.next_state as current_state:
+                  while self.next_state == current_state:
+                        if fifo.empty():
+                              input = None
+                        else:
+                              input = fifo.get()
+                        self.next_state = current_state.doSomething(input)
 
 
 
+second_thread = _thread.start_new_thread(core1_thread, ())
 machine_ = PulseCheck(MenuState(), fifo)
 while True:
       machine_.execute()
