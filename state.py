@@ -1,8 +1,9 @@
 from fifo import Fifo
 from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
-import _thread
+import _thread, time
 from historian import History
+from utility import format_filenames, format_data
 
 #Pin declarations
 ROTA = 10
@@ -90,9 +91,8 @@ class ReadHistoryState(State):
             global ROT_PUSH
             self.state = self
             data = historian.read(self.file)
-            print(data)
-            test = ['RMSSD', 'SDNN']
-            screen.draw_items(test)
+            data = format_data(data)
+            screen.draw_items(data, offset=0)
             return self
 
       def doSomething(self, input):
@@ -104,11 +104,6 @@ class ReadHistoryState(State):
             pass
 
 
-def format_filename(self):
-      pass
-
-
-
 class HistoryState(State):
       def __enter__(self):
             global ROTB
@@ -116,8 +111,7 @@ class HistoryState(State):
             self.state = self
             self.select = 0
             self.items = historian.contents()
-            print(self.items)
-            screen.draw_items(self.items)
+            screen.draw_items(format_filenames(self.items))
             screen.draw_cursor(self.select)
             return self
 
