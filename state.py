@@ -2,6 +2,7 @@ from fifo import Fifo
 from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
 import _thread
+from historian import History
 
 #Pin declarations
 ROTA = 10
@@ -16,6 +17,9 @@ ADC = 26
 
 #Create fifo for input events, signed short needed for rotary
 fifo = Fifo(50, 'h')
+
+#Create the historian for local saving
+historian = History()
 
 #Create hardware objects
 button = Button(ROT_PUSH, fifo)
@@ -77,13 +81,55 @@ class KubiosState(State):
             pass
 
 
-class HistoryState(State):
+#Special case where init is used to get the file to be read
+class ReadHistoryState(State):
+      def __init__(self, filename):
+            self.file = filename
+
       def __enter__(self):
+            global ROT_PUSH
+            self.state = self
+            data = historian.read(self.file)
+            print(data)
+            test = ['RMSSD', 'SDNN']
+            screen.draw_items(test)
             return self
 
       def doSomething(self, input):
-            print('History state')
-            return MenuState()
+            if input == ROT_PUSH:
+                  self.state = MenuState()
+            return self.state
+
+      def __exit__(self, exc_type, exc_value, traceback):
+            pass
+
+
+def format_filename(self):
+      pass
+
+
+
+class HistoryState(State):
+      def __enter__(self):
+            global ROTB
+            global ROT_PUSH
+            self.state = self
+            self.select = 0
+            self.items = historian.contents()
+            print(self.items)
+            screen.draw_items(self.items)
+            screen.draw_cursor(self.select)
+            return self
+
+      def doSomething(self, input):
+            
+            if input == ROT_PUSH:
+                  self.state = ReadHistoryState(self.items[self.select])
+            elif input == ROTB:
+                  self.select += fifo.get()
+                  self.select = min(max(0, self.select), len(self.items)-1)
+                  screen.draw_cursor(self.select)
+            return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
             pass
@@ -97,14 +143,14 @@ class MenuState(State):
             self.select = 0
             self.items = ['MEASURE HR', 'HRV ANALYSIS', 'KUBIOS', 'HISTORY']
             self.states = [MeasureHrState, HrvAnalysisState, KubiosState, HistoryState]
-            screen.draw_menu(self.items)
+            screen.draw_items(self.items)
             screen.draw_cursor(self.select)
             return self
 
       def doSomething(self, input):
             if input == ROT_PUSH:
                   self.state = self.states[self.select]()
-            if input == ROTB:
+            elif input == ROTB:
                   self.select += fifo.get()
                   self.select = min(max(0, self.select), len(self.items)-1)
                   screen.draw_cursor(self.select)

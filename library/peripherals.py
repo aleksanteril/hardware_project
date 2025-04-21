@@ -26,7 +26,7 @@ class Screen(SSD1306_I2C):
             self.y_old = self.y
             return
 
-      def hr_plot_pos(self, x, y):
+      def hr_plot_pos(self, x: int, y: int):
             self.x = x
             self.y = y
             return
@@ -40,18 +40,18 @@ class Screen(SSD1306_I2C):
             self.text(f"avg BPM: {self.bpm}", 0, 48, 1)
             return
       
-      def draw_menu(self, items):
+      def draw_items(self, items: list, offset: int = 10):
+            self.fill(0)
             for i in range(len(items)):
-                  self.text(items[i], 10, i*10, 1)
+                  self.text(items[i], offset, i*10, 1)
             return
       
-      def draw_cursor(self, pos):
+      def draw_cursor(self, pos: int):
             self.fill_rect(0, 0, 10, 63, 0)
             self.text('>', 0, pos*10, 1)
             return
 
             
-
 class Isr_fifo(Fifo):
       def __init__(self, size, adc_pin):
             self.av = ADC(adc_pin)
