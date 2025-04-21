@@ -31,6 +31,7 @@ screen = Screen(OLED_DA, OLED_CLK)
 led1 = Led(LED1)
 adc = Isr_fifo(10, ADC)
 
+
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
       while True:
