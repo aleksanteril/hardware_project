@@ -181,7 +181,7 @@ class HrvAnalysisState(State, Measure):
             hr = analysis.mean_hr(self.PPI)
             data = {
                         "id": stamp,
-                        "time": stamp,
+                        "timestamp": stamp,
                         "mean_hr": hr,
                         "mean_ppi": mean_ppi,
                         "rmssd": rmssd,
@@ -196,14 +196,11 @@ class HrvAnalysisState(State, Measure):
             if input == ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  adc.deinit_timer()
                   data = self.analysis()
                   historian.write('hrv', data)
                   self.state = ViewHrvAnalysisState(data)
             return self.state
-
-      def __exit__(self, exc_type, exc_value, traceback):
-            adc.deinit_timer()
-            pass
 
 
 class KubiosState(State, Measure):
