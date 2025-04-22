@@ -3,6 +3,7 @@ from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
 import time, analysis, utility, gc
 from historian import History
+from template_state import State
 '''This file contains the state machines nodes that are running on the PulseCheck'''
 
 
@@ -38,23 +39,8 @@ def core1_thread():
             try:
                   screen.show()
             except:
-                  pass
+                  print('Core1 exception!')
             gc.collect()
-            
-
-#Template state class
-class State:
-      def __enter__(self):
-            global ROTB
-            global ROT_PUSH
-            self.state = self
-            return self
-
-      def run(self):
-            pass
-
-      def __exit__(self, exc_type, exc_value, traceback):
-            pass
 
 #Class for states with measuring functionality
 class Measure:
@@ -78,7 +64,7 @@ class Measure:
             self.samples.append(adc.get())
             return True
 
-      def measure(self, MAX_PPI_SIZE):
+      def measure(self, MAX_PPI_SIZE: int):
             if not self.read_sample_to_list():
                   return
             self.sample_num += 1
@@ -253,8 +239,8 @@ class ReadHistoryState(State):
 
       def __enter__(self):
             data = historian.read(self.file)
-            data = utility.format_data(data)
-            screen.draw_items(data, offset=0)
+            self.data = utility.format_data(data)
+            screen.draw_items(self.data, offset=0)
             return State.__enter__(self)
 
       def run(self, input):
@@ -273,7 +259,9 @@ class HistoryState(State):
             return State.__enter__(self)
 
       def run(self, input):
-            if input == ROT_PUSH:
+            if not self.items:
+                  self.state = ErrorState('No History')
+            elif input == ROT_PUSH:
                   self.state = ReadHistoryState(self.items[self.select])
             elif input == ROTB:
                   self.select += fifo.get()
