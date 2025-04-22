@@ -58,7 +58,7 @@ class Online:
             print(f"Failed to connect to MQTT: {e}")
             return None
 
-
+    # Send MQTT message method
     def send_mqtt_message(self, client, topic, data: list):  # Try sending a message when method is called upon. If no connection, give error.
         if client is not None:
             try:
@@ -72,30 +72,35 @@ class Online:
     def is_connected(self) -> bool:
         return self.connected
 
+    
+    # Send HRV data to kubios and receive the data returned by kubios (UNDER DEVELOPMENT)
     def send_kubios(self, data: dict) -> dict:
         data = ujson.dumps(data)
         self.kubios_mqtt.subscribe('kubios-response', data)
         self.send_mqtt_message(self.kubios_mqtt,'kubios-request', data)
     
+    # Send data locally to hr-data topic
     def send_local(self, data: dict):
         data = ujson.dumps(data)
         self.send_mqtt_message(self.kubios_mqtt,'hr-data', data)
         
-
+# Kubios test data
 k_data = {
     "id": 787,
     "type": "RRI",
     "data": [828, 836, 852, 760, 800, 796, 856, 824, 808, 776, 724, 816, 800, 812, 812, 812, 756, 820, 812, 800],
     "analysis": { "type": "readiness"}
   }
-
+# Local HR test data
 hr_data = {
     "id": 123,
     "timestamp": 123456789,
     "mean_hr": 78
   }
 
+# Object creation
 connect = Online("KMD657_Group_1", "ykasonni123", "192.168.1.253")
 
+# Method call to send HR data
 connect.send_local(hr_data)
 
