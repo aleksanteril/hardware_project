@@ -257,7 +257,7 @@ class KubiosState(State, Measure):
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
                   try:
-                        data = format_data()
+                        data = self.format_data()
                         #data = send_kubios(data)
                         #historian.write('kubios', data)
                         self.state = ViewAnalysisState(data)
