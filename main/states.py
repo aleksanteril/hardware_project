@@ -32,11 +32,16 @@ screen = Screen(OLED_DA, OLED_CLK)
 led1 = Led(LED1)
 adc = Isr_fifo(10, ADC)
 
+measuring = False
+
 
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
+      global measuring
       while True:
             try:
+                  if measuring: #Hack to fix the flickering bpm value :(
+                        screen.draw_bpm()
                   screen.show()
             except:
                   print('Core1 exception!')
@@ -135,6 +140,8 @@ class ErrorState(State):
 
 class MeasureHrState(State, Measure):
       def __enter__(self):
+            global measuring
+            measuring = True
             screen.fill(0)
             self.bpm = 0
             return State.__enter__(self)
@@ -144,7 +151,6 @@ class MeasureHrState(State, Measure):
             if self.PPI:
                   self.bpm = round(analysis.mean_hr(self.PPI))
             screen.hr_bpm(self.bpm)
-            screen.draw_bpm()
             return
 
       def run(self, input):
@@ -155,6 +161,8 @@ class MeasureHrState(State, Measure):
             return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
+            global measuring
+            measuring = False
             adc.deinit_timer()
             return
 
