@@ -58,14 +58,14 @@ class Measure:
             #Start sample reading
             adc.init_timer(250)
 
-      def read_sample_to_list(self) -> bool:
+      def _read_sample_to_list(self) -> bool:
             if adc.empty():
                   return False
             self.samples.append(adc.get())
             return True
 
       def measure(self, MAX_PPI_SIZE: int):
-            if not self.read_sample_to_list():
+            if not self._read_sample_to_list():
                   return
             self.sample_num += 1
             if len(self.samples) <= 500:
@@ -73,7 +73,7 @@ class Measure:
                   return
 
             del self.samples[0]
-            self.find_ppi()
+            self._find_ppi()
             if len(self.PPI) > MAX_PPI_SIZE:
                   del self.PPI[0]
 
@@ -88,7 +88,7 @@ class Measure:
                   self.PPI.append(ppi)
             return
 
-      def find_ppi(self):
+      def _find_ppi(self):
             threshold = (sum(self.samples) / len(self.samples))*1.025
             sample = self.samples[-1]
 
@@ -192,7 +192,7 @@ class HrvAnalysisState(State, Measure):
                   adc.deinit_timer()
                   try:
                         data = analysis.full(self.PPI)
-                        historian.write('hrv', data)
+                        historian.write(data)
                         self.state = ViewAnalysisState(data)
                   except:
                         self.state = ErrorState('Bad data')
@@ -221,7 +221,7 @@ class KubiosState(State, Measure):
                   try:
                         data = utility.format_kubios_message(self.PPI)
                         #data = send_kubios(data)
-                        #historian.write('kubios', data)
+                        #historian.write(data)
                         self.state = ViewAnalysisState(data)
                         pass
                   except:

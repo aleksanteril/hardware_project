@@ -24,11 +24,11 @@ class History:
             return
 
       #Create and save a new measurement.txt file
-      def write(self, type: str, data: dict):
+      def write(self, data: dict):
             self._folder_manager()
             date = mktime(localtime())
             #File name is formatted: name_secondsfrom1stjan2000
-            file = f'{type}_{date}'
+            file = f'meas_{date}'
             try:
                   with open(f'./{self._dir}/{file}', 'x') as f:
                         ujson.dump(data, f)
