@@ -62,6 +62,7 @@ class Measure:
             self.max_list, self.scale_fc, self.sample_num = 0, 0, 0
             #Samples: for drawing and threshold calculating
             self.samples, self.PPI = [], []
+            self.x, self.y = 0, 0
             #Start sample reading
             adc.init_timer(250)
 
@@ -91,6 +92,7 @@ class Measure:
 
       def accept_ppi_to_list(self, ppi: int):
             if 250 < ppi < 2000:
+                  screen.text('X', self.x-6, 12, 1)
                   self.PPI.append(ppi)
             return
 
@@ -111,26 +113,29 @@ class Measure:
                   self.edge = False
                   return
             return
+      
+      def display_data(self):
+            self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
+            self.y = min(max(0, self.y), 31)
+            screen.hr_plot_pos(self.x, self.y)
+            screen.draw_hr()
+            self.x = (self.x + 1) % screen.width
+            return
 
 
 ##State machine states start here
 class MeasureHrState(State, Measure):
       def __enter__(self):
             screen.fill(0)
-            self.x, self.y = 0, 0
             self.bpm = 0
             return State.__enter__(self)
 
       def display_data(self):
-            self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
-            self.y = min(max(0, self.y), 31)
+            Measure.display_data(self)
             if self.PPI:
                   self.bpm = round(analysis.mean_hr(self.PPI))
-            screen.hr_plot_pos(self.x, self.y)
-            screen.draw_hr()
             screen.hr_bpm(self.bpm)
             screen.draw_bpm()
-            self.x = (self.x + 1) % screen.width
 
       def run(self, input):
             self.measure(10)
@@ -144,14 +149,47 @@ class MeasureHrState(State, Measure):
             adc.deinit_timer()
             return
 
+#Special case where init is used to get the data to be drawn on entry
+class ViewHrvAnalysisState(State):
+      def __init__(self, data):
+            self.data = data
 
-class HrvAnalysisState(State, Measure):
       def __enter__(self):
+            screen.draw_items(self.data, offset=0)
             return State.__enter__(self)
 
       def run(self, input):
-            print('Hrv analysis state')
-            return MenuState()
+            if input == ROT_PUSH:
+                  self.state = MenuState()
+            return self.state
+
+
+class HrvAnalysisState(State, Measure):
+      def __enter__(self):
+            screen.fill(0)
+            self.start_time = time.ticks_ms()
+            self.timeout = 30000 #ms
+            screen.text('Relax ...', 0, 54, 1)
+            return State.__enter__(self)
+      
+      def analysis(self):
+            mean_ppi = analysis.mean_ppi(self.PPI)
+            rmssd = analysis.rmssd(self.PPI)
+            sdnn = analysis.sdnn(self.PPI)
+            hr = analysis.mean_hr(self.PPI)
+            data = [f'MEAN PPI: {mean_ppi}', f'MEAN HR: {hr}', f'RMSSD: {rmssd}', f'SDNN: {sdnn}']
+            return data
+
+      def run(self, input):
+            self.measure(30)
+            if len(self.samples) > 250 and self.sample_num % 10 == 0:
+                  self.display_data()
+            if input == ROT_PUSH:
+                  self.state = MenuState()
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  data = self.analysis()
+                  self.state = ViewHrvAnalysisState(data)
+            return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
             adc.deinit_timer()
@@ -160,6 +198,8 @@ class HrvAnalysisState(State, Measure):
 
 class KubiosState(State, Measure):
       def __enter__(self):
+            screen.fill(0)
+            self.start_time = time.ticks_ms()
             return State.__enter__(self)
 
       def run(self, input):
