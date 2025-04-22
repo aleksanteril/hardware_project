@@ -159,6 +159,7 @@ class MeasureHrState(State, Measure):
                   self.bpm = round(analysis.mean_hr(self.PPI))
             screen.hr_bpm(self.bpm)
             screen.draw_bpm()
+            return
 
       def run(self, input):
             self.measure(10)
@@ -195,21 +196,6 @@ class HrvAnalysisState(State, Measure):
             screen.text('Relax ...', 0, 54, 1)
             return State.__enter__(self)
       
-      def analysis(self):
-            stamp = time.mktime(time.localtime())
-            mean_ppi = round(analysis.mean_ppi(self.PPI))
-            rmssd = round(analysis.rmssd(self.PPI))
-            sdnn = round(analysis.sdnn(self.PPI))
-            hr = round(analysis.mean_hr(self.PPI))
-            data = {
-                        "id": stamp,
-                        "timestamp": stamp,
-                        "mean_hr": hr,
-                        "mean_ppi": mean_ppi,
-                        "rmssd": rmssd,
-                        "sdnn": sdnn
-                  }
-            return data
 
       def run(self, input):
             self.measure(30)
@@ -219,7 +205,7 @@ class HrvAnalysisState(State, Measure):
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
                   try:
-                        data = self.analysis()
+                        data = analysis.full(self.PPI)
                         historian.write('hrv', data)
                         self.state = ViewAnalysisState(data)
                   except:
@@ -239,16 +225,6 @@ class KubiosState(State, Measure):
             screen.text('Relax ...', 0, 54, 1)
             return State.__enter__(self)
 
-      def format_data(self) -> dict:
-            stamp = time.mktime(time.localtime())
-            data =  {
-                        "id": stamp,
-                        "type": "RRI",
-                        "data": self.PPI,
-                        "analysis": { "type": "readiness" }
-                  }
-            return data
-
       def run(self, input):
             self.measure(30)
             self.display_data()
@@ -257,7 +233,7 @@ class KubiosState(State, Measure):
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
                   try:
-                        data = self.format_data()
+                        data = utility.format_kubios_message(self.PPI)
                         #data = send_kubios(data)
                         #historian.write('kubios', data)
                         self.state = ViewAnalysisState(data)
@@ -268,7 +244,7 @@ class KubiosState(State, Measure):
 
       def __exit__(self, exc_type, exc_value, traceback):
             adc.deinit_timer()
-            pass
+            return
 
 #Special case where init is used to get the file to be read
 class ReadHistoryState(State):

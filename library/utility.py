@@ -1,4 +1,4 @@
-from time import localtime, ticks_diff, ticks_ms
+from time import localtime, mktime
 
 def format_filenames(files: list) -> list:
       formatted = []
@@ -15,6 +15,16 @@ def format_data(data: dict) -> list:
       for d in data:
             formatted.append(f'{d.upper()}: {data[d]}')
       return formatted
+
+def format_kubios_message(ppi: list) -> dict:
+            stamp = mktime(localtime())
+            data =  {
+                        "id": stamp,
+                        "type": "RRI",
+                        "data": ppi,
+                        "analysis": { "type": "readiness" }
+                  }
+            return data
 
 
 def calculate_plotting_values(samples: list):
