@@ -1,7 +1,7 @@
 from fifo import Fifo
 from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
-import time, analysis, utility
+import time, analysis, utility, gc
 from historian import History
 '''This file contains the state machines nodes that are running on the PulseCheck'''
 
@@ -35,7 +35,12 @@ adc = Isr_fifo(10, ADC)
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
       while True:
-            screen.show()
+            try:
+                  screen.show()
+            except:
+                  pass
+            gc.collect()
+            
 
 #Template state class
 class State:
