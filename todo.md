@@ -4,8 +4,7 @@
 ### The Main Program
 
 - Multithreading needs some exploration, it's a bit buggy right now but with a try expect hack it runs stable
-- Measuring HR, drawing the hr flickers needs to be fixed, something to do with probably thread locks?,
-- Other fix is a flag and doing the drawing in the second score when flag is up!
+- Need to run for long time to test stability
 ---
 ### The Algorithm
 
