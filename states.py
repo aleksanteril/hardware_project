@@ -255,6 +255,7 @@ class HistoryState(State):
       def __enter__(self):
             self.select = 0
             self.items = historian.contents()
+            self.items.reverse()
             screen.draw_items(utility.format_filenames(self.items))
             screen.draw_cursor(self.select)
             return State.__enter__(self)
