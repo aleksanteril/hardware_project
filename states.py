@@ -121,7 +121,7 @@ class Measure:
             return
       
       def display_data(self):
-            if len(self.samples) < 500 or self.sample_num % 5 != 0 or not self.got_data:
+            if self.sample_num < 750 or self.sample_num % 5 != 0 or not self.got_data:
                   return
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
             self.y = min(max(0, self.y), 31)
@@ -133,6 +133,20 @@ class Measure:
 
 
 ##State machine states start here
+class ErrorState(State):
+      def __init__(self, message):
+            self.error = ['ERROR', message]
+
+      def __enter__(self):
+            screen.draw_items(self.error, offset=0)
+            return State.__enter__(self)
+
+      def run(self, input):
+            if input == ROT_PUSH:
+                  self.state = MenuState()
+            return self.state
+
+
 class MeasureHrState(State, Measure):
       def __enter__(self):
             screen.fill(0)
@@ -158,7 +172,7 @@ class MeasureHrState(State, Measure):
             return
 
 #Special case where init is used to get the data to be drawn on entry
-class ViewHrvAnalysisState(State):
+class ViewAnalysisState(State):
       def __init__(self, data):
             self.data = data
 
@@ -204,9 +218,12 @@ class HrvAnalysisState(State, Measure):
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
-                  data = self.analysis()
-                  historian.write('hrv', data)
-                  self.state = ViewHrvAnalysisState(data)
+                  try:
+                        data = self.analysis()
+                        historian.write('hrv', data)
+                        self.state = ViewAnalysisState(data)
+                  except:
+                        self.state = ErrorState('Bad data')
             return self.state
       
       def __exit__(self, exc_type, exc_value, traceback):
@@ -222,6 +239,16 @@ class KubiosState(State, Measure):
             screen.text('Relax ...', 0, 54, 1)
             return State.__enter__(self)
 
+      def format_data(self) -> dict:
+            stamp = time.mktime(time.localtime())
+            data =  {
+                        "id": stamp,
+                        "type": "RRI",
+                        "data": self.PPI,
+                        "analysis": { "type": "readiness" }
+                  }
+            return data
+
       def run(self, input):
             self.measure(30)
             self.display_data()
@@ -229,10 +256,14 @@ class KubiosState(State, Measure):
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
-                  data = self.PPI
-                  #send data to kubios here
-                  #historian.write('hrv', data)
-                  #self.state = ViewKubiosAnalysisState(data)
+                  try:
+                        data = format_data()
+                        #data = send_kubios(data)
+                        #historian.write('kubios', data)
+                        self.state = ViewAnalysisState(data)
+                        pass
+                  except:
+                        self.state = ErrorState('Upload failed!')
             return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
