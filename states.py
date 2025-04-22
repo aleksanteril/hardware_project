@@ -63,6 +63,7 @@ class Measure:
             #Samples: for drawing and threshold calculating
             self.samples, self.PPI = [], []
             self.x, self.y = 0, 0
+            self.got_data = False
             #Start sample reading
             adc.init_timer(250)
 
@@ -76,18 +77,18 @@ class Measure:
             if not self.read_sample_to_list():
                   return
             self.sample_num += 1
-            if len(self.samples) < 500:
+            if len(self.samples) <= 500:
+                  self.got_data = True
                   return
 
-            if len(self.samples) > 500:
-                  del self.samples[0]
-
+            del self.samples[0]
             self.find_ppi()
             if len(self.PPI) > MAX_PPI_SIZE:
                   del self.PPI[0]
 
             if self.sample_num % 250 == 0:
                   self.max_list, self.scale_fc = utility.calculate_plotting_values(self.samples[:250])
+            self.got_data = True
             return
 
       def accept_ppi_to_list(self, ppi: int):
@@ -115,11 +116,14 @@ class Measure:
             return
       
       def display_data(self):
+            if len(self.samples) < 500 or self.sample_num % 5 != 0 or not self.got_data:
+                  return
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
             self.y = min(max(0, self.y), 31)
             screen.hr_plot_pos(self.x, self.y)
             screen.draw_hr()
             self.x = (self.x + 1) % screen.width
+            self.got_data = False
             return
 
 
@@ -139,8 +143,7 @@ class MeasureHrState(State, Measure):
 
       def run(self, input):
             self.measure(10)
-            if len(self.samples) > 500 and self.sample_num % 5 == 0:
-                  self.display_data()
+            self.display_data()
             if input == ROT_PUSH:
                   self.state = MenuState()
             return self.state
@@ -191,13 +194,9 @@ class HrvAnalysisState(State, Measure):
 
       def run(self, input):
             self.measure(30)
-            if len(self.samples) > 500 and self.sample_num % 5 == 0:
-                  self.display_data()
+            self.display_data()
             if input == ROT_PUSH:
                   self.state = MenuState()
-            elif not self.PPI:
-                  #Error state, empty list
-                  pass
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
                   data = self.analysis()
@@ -220,13 +219,9 @@ class KubiosState(State, Measure):
 
       def run(self, input):
             self.measure(30)
-            if len(self.samples) > 500 and self.sample_num % 5 == 0:
-                  self.display_data()
+            self.display_data()
             if input == ROT_PUSH:
                   self.state = MenuState()
-            elif not self.PPI:
-                  #Error state, empty list
-                  pass
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
                   data = self.PPI
