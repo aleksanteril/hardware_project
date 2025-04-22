@@ -1,6 +1,7 @@
 {
       "urls": [
-        ["test.py", "http://localhost:8000/test.py"],
+        ["main.py", "http://localhost:8000/main.py"],
+        ["states.py", "http://localhost:8000/states.py"],
         ["lib/filefifo.py", "http://localhost:8000/pico-lib/filefifo.py"],	
         ["lib/fifo.py", "http://localhost:8000/pico-lib/fifo.py"],
         ["lib/piotimer.py", "http://localhost:8000/pico-lib/piotimer.py"],
@@ -9,6 +10,7 @@
         ["lib/umqtt/simple.mpy", "http://localhost:8000/pico-lib/umqtt/simple.mpy"],
         ["lib/analysis.py", "http://localhost:8000/library/analysis.py"],
         ["lib/historian.py", "http://localhost:8000/library/historian.py"],
+        ["lib/utility.py", "http://localhost:8000/library/utility.py"],
         ["lib/peripherals.py", "http://localhost:8000/library/peripherals.py"]
       ],
       "deps": [

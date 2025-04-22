@@ -139,7 +139,7 @@ class MeasureHrState(State, Measure):
 
       def run(self, input):
             self.measure(10)
-            if len(self.samples) > 250 and self.sample_num % 8 == 0:
+            if len(self.samples) > 500 and self.sample_num % 5 == 0:
                   self.display_data()
             if input == ROT_PUSH:
                   self.state = MenuState()
@@ -175,10 +175,10 @@ class HrvAnalysisState(State, Measure):
       
       def analysis(self):
             stamp = time.mktime(time.localtime())
-            mean_ppi = analysis.mean_ppi(self.PPI)
-            rmssd = analysis.rmssd(self.PPI)
-            sdnn = analysis.sdnn(self.PPI)
-            hr = analysis.mean_hr(self.PPI)
+            mean_ppi = round(analysis.mean_ppi(self.PPI))
+            rmssd = round(analysis.rmssd(self.PPI))
+            sdnn = round(analysis.sdnn(self.PPI))
+            hr = round(analysis.mean_hr(self.PPI))
             data = {
                         "id": stamp,
                         "timestamp": stamp,
@@ -191,27 +191,49 @@ class HrvAnalysisState(State, Measure):
 
       def run(self, input):
             self.measure(30)
-            if len(self.samples) > 250 and self.sample_num % 10 == 0:
+            if len(self.samples) > 500 and self.sample_num % 5 == 0:
                   self.display_data()
             if input == ROT_PUSH:
                   self.state = MenuState()
+            elif not self.PPI:
+                  #Error state, empty list
+                  pass
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
                   data = self.analysis()
                   historian.write('hrv', data)
                   self.state = ViewHrvAnalysisState(data)
             return self.state
+      
+      def __exit__(self, exc_type, exc_value, traceback):
+            adc.deinit_timer()
+            return
 
 
 class KubiosState(State, Measure):
       def __enter__(self):
             screen.fill(0)
             self.start_time = time.ticks_ms()
+            self.timeout = 30000 #ms
+            screen.text('Relax ...', 0, 54, 1)
             return State.__enter__(self)
 
       def run(self, input):
-            print('Kubios analysis state')
-            return MenuState()
+            self.measure(30)
+            if len(self.samples) > 500 and self.sample_num % 5 == 0:
+                  self.display_data()
+            if input == ROT_PUSH:
+                  self.state = MenuState()
+            elif not self.PPI:
+                  #Error state, empty list
+                  pass
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  adc.deinit_timer()
+                  data = self.PPI
+                  #send data to kubios here
+                  #historian.write('hrv', data)
+                  #self.state = ViewKubiosAnalysisState(data)
+            return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
             adc.deinit_timer()
