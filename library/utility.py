@@ -1,0 +1,30 @@
+from time import localtime, ticks_diff, ticks_ms
+
+def format_filenames(files: list) -> list:
+      formatted = []
+      for name in files:
+            name = name.split('_')
+            date = localtime(int(name[1]))
+            name = f'{name[0].upper()} {date[2]}/{date[1]}/{date[0]}'
+            formatted.append(name)
+      return formatted
+
+
+def format_data(data: dict) -> list:
+      formatted = []
+      for d in data:
+            formatted.append(f'{d.upper()}: {data[d]}')
+      return formatted
+
+
+def calculate_plotting_values(samples: list):
+      #Calculate scaling factor
+      max_list = max(samples)
+      min_list = min(samples)
+      scale_fc = 32 / (max_list - min_list)
+      return max_list, scale_fc
+
+
+def plot_sample(sample: int, max_list: int, scale_fc: float) -> int:
+      pos = (sample - max_list) * scale_fc * -1
+      return round(pos)
