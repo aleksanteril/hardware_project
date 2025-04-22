@@ -155,7 +155,8 @@ class ViewHrvAnalysisState(State):
             self.data = data
 
       def __enter__(self):
-            screen.draw_items(self.data, offset=0)
+            data = utility.format_data(self.data)
+            screen.draw_items(data, offset=0)
             return State.__enter__(self)
 
       def run(self, input):
@@ -173,11 +174,19 @@ class HrvAnalysisState(State, Measure):
             return State.__enter__(self)
       
       def analysis(self):
+            stamp = time.mktime(time.localtime())
             mean_ppi = analysis.mean_ppi(self.PPI)
             rmssd = analysis.rmssd(self.PPI)
             sdnn = analysis.sdnn(self.PPI)
             hr = analysis.mean_hr(self.PPI)
-            data = [f'MEAN PPI: {mean_ppi}', f'MEAN HR: {hr}', f'RMSSD: {rmssd}', f'SDNN: {sdnn}']
+            data = {
+                        "id": stamp,
+                        "time": stamp,
+                        "mean_hr": hr,
+                        "mean_ppi": mean_ppi,
+                        "rmssd": rmssd,
+                        "sdnn": sdnn
+                  }
             return data
 
       def run(self, input):
@@ -188,6 +197,7 @@ class HrvAnalysisState(State, Measure):
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   data = self.analysis()
+                  historian.write('hrv', data)
                   self.state = ViewHrvAnalysisState(data)
             return self.state
 
