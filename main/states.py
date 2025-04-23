@@ -32,20 +32,13 @@ screen = Screen(OLED_DA, OLED_CLK)
 led1 = Led(LED1)
 adc = Isr_fifo(10, ADC)
 
-measuring = False
-
 
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
-      global measuring
       while True:
-            try:
-                  if measuring: #Hack to fix the flickering bpm value :(
-                        screen.draw_bpm()
-                  screen.show()
-            except:
-                  print('Core1 exception!')
+            screen.update()
             gc.collect()
+
 
 #Class for states with measuring functionality
 class Measure:
@@ -89,7 +82,7 @@ class Measure:
 
       def accept_ppi_to_list(self, ppi: int):
             if 250 < ppi < 2000:
-                  screen.text('X', self.x-6, 12, 1)
+                  screen.ppi()
                   self.PPI.append(ppi)
             return
 
@@ -117,9 +110,13 @@ class Measure:
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
             self.y = min(max(0, self.y), 31)
             screen.hr_plot_pos(self.x, self.y)
-            screen.draw_hr()
             self.x = (self.x + 1) % screen.width
             self.got_data = False
+            return
+      
+      def __exit__(self, exc_type, exc_value, traceback):
+            screen.hr_plot_pos(-1, 16) #To fix wild pixel upon re-entering measuring
+            adc.deinit_timer()
             return
 
 
@@ -129,7 +126,8 @@ class ErrorState(State):
             self.error = ['ERROR', message]
 
       def __enter__(self) -> object:
-            screen.draw_items(self.error, offset=0)
+            screen.items(self.error, offset=0)
+            screen.set_mode(3)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
@@ -140,9 +138,7 @@ class ErrorState(State):
 
 class MeasureHrState(State, Measure):
       def __enter__(self) -> object:
-            global measuring
-            measuring = True
-            screen.fill(0)
+            screen.set_mode(0)
             self.bpm = 0
             return State.__enter__(self)
 
@@ -161,9 +157,8 @@ class MeasureHrState(State, Measure):
             return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
-            global measuring
-            measuring = False
-            adc.deinit_timer()
+            Measure.__exit__(self, exc_type, exc_value, traceback)
+            screen.hr_bpm(0)
             return
 
 #Special case where init is used to get the data to be drawn on entry
@@ -173,7 +168,8 @@ class ViewAnalysisState(State):
 
       def __enter__(self) -> object:
             data = utility.format_data(self.data)
-            screen.draw_items(data, offset=0)
+            screen.items(data, offset=0)
+            screen.set_mode(3)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
@@ -184,10 +180,9 @@ class ViewAnalysisState(State):
 
 class HrvAnalysisState(State, Measure):
       def __enter__(self) -> object:
-            screen.fill(0)
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
-            screen.text('Relax ...', 0, 54, 1)
+            screen.set_mode(2)
             return State.__enter__(self)
       
 
@@ -207,16 +202,15 @@ class HrvAnalysisState(State, Measure):
             return self.state
       
       def __exit__(self, exc_type, exc_value, traceback):
-            adc.deinit_timer()
+            Measure.__exit__(self, exc_type, exc_value, traceback)
             return
 
 
 class KubiosState(State, Measure):
       def __enter__(self) -> object:
-            screen.fill(0)
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
-            screen.text('Relax ...', 0, 54, 1)
+            screen.set_mode(2)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
@@ -237,7 +231,7 @@ class KubiosState(State, Measure):
             return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
-            adc.deinit_timer()
+            Measure.__exit__(self, exc_type, exc_value, traceback)
             return
 
 #Special case where init is used to get the file to be read
@@ -248,7 +242,8 @@ class ReadHistoryState(State):
       def __enter__(self) -> object:
             data = historian.read(self.file)
             self.data = utility.format_data(data)
-            screen.draw_items(self.data, offset=0)
+            screen.items(self.data, offset=0)
+            screen.set_mode(3)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
@@ -262,8 +257,9 @@ class HistoryState(State):
             self.select = 0
             self.items = historian.contents()
             self.items.reverse()
-            screen.draw_items(utility.format_filenames(self.items))
-            screen.draw_cursor(self.select)
+            screen.items(utility.format_filenames(self.items))
+            screen.cursor_pos(self.select)
+            screen.set_mode(1)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
@@ -274,7 +270,7 @@ class HistoryState(State):
             elif input == ROTB:
                   self.select += fifo.get()
                   self.select = min(max(0, self.select), len(self.items)-1)
-                  screen.draw_cursor(self.select)
+                  screen.cursor_pos(self.select)
             return self.state
 
 
@@ -283,8 +279,9 @@ class MenuState(State):
             self.select = 0
             self.items = ['MEASURE HR', 'HRV ANALYSIS', 'KUBIOS', 'HISTORY']
             self.states = [MeasureHrState, HrvAnalysisState, KubiosState, HistoryState]
-            screen.draw_items(self.items)
-            screen.draw_cursor(self.select)
+            screen.items(self.items)
+            screen.cursor_pos(self.select)
+            screen.set_mode(1)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
@@ -293,7 +290,7 @@ class MenuState(State):
             elif input == ROTB:
                   self.select += fifo.get()
                   self.select = min(max(0, self.select), len(self.items)-1)
-                  screen.draw_cursor(self.select)
+                  screen.cursor_pos(self.select)
             return self.state
 
 

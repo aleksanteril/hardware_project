@@ -1,6 +1,6 @@
 from peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
-import time, analysis, utility, gc
+import time, analysis, utility, gc, _thread
 from historian import History
 from template_state import State
 '''This file contains the state machines nodes that are running on the PulseCheck'''
@@ -20,16 +20,22 @@ ADC = 26
 screen = Screen(OLED_DA, OLED_CLK)
 adc = Isr_fifo(10, ADC)
 
+#Global flags for screen drawing via second core
 measuring = False
-
+empty = False
 
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
+      global empty
       global measuring
       while True:
-            try:
+            try:  
+                  if empty:
+                        screen.fill(0)
+                        empty = False
                   if measuring: #Hack to fix the flickering bpm value :(
                         screen.draw_bpm()
+                        screen.draw_hr()
                   screen.show()
             except:
                   print('Core1 exception!')
@@ -106,7 +112,6 @@ class Measure:
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
             self.y = min(max(0, self.y), 31)
             screen.hr_plot_pos(self.x, self.y)
-            screen.draw_hr()
             self.x = (self.x + 1) % screen.width
             self.got_data = False
             return
@@ -116,8 +121,9 @@ class Measure:
 class MeasureHrState(State, Measure):
       def __enter__(self) -> object:
             global measuring
+            global empty
             measuring = True
-            screen.fill(0)
+            empty = True
             self.bpm = 0
             return State.__enter__(self)
 
