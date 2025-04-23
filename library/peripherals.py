@@ -11,7 +11,7 @@ micropython.alloc_emergency_exception_buf(200)
 
 '''This file contains all the I/O hardware peripherals for the project and their interfaces'''
 class Screen(SSD1306_I2C):
-      def __init__(self, da, cl):
+      def __init__(self, da: int, cl: int):
             i2c = I2C(1, sda=Pin(da), scl=Pin(cl), freq=400000)
             self.width = 128
             self.heigth = 64
@@ -53,7 +53,7 @@ class Screen(SSD1306_I2C):
 
             
 class Isr_fifo(Fifo):
-      def __init__(self, size, adc_pin):
+      def __init__(self, size: int, adc_pin: int):
             self.av = ADC(adc_pin)
             super().__init__(size)
       
@@ -72,7 +72,7 @@ class Isr_fifo(Fifo):
 
 
 class Rotary:
-      def __init__(self, clock, signal, fifo):
+      def __init__(self, clock: int, signal: int, fifo: object):
             self.clock = Pin(clock, Pin.IN)
             self.signal = Pin(signal, Pin.IN)
             self.fifo = fifo
@@ -100,7 +100,7 @@ class Rotary:
       
 
 class Button:
-      def __init__(self, id, fifo, DEBOUNCE=250):
+      def __init__(self, id: int, fifo: object, DEBOUNCE: int = 250):
             self.button = Pin(id, Pin.IN, Pin.PULL_UP)
             self.debounce = DEBOUNCE
             self.fifo = fifo

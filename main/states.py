@@ -128,18 +128,18 @@ class ErrorState(State):
       def __init__(self, message):
             self.error = ['ERROR', message]
 
-      def __enter__(self):
+      def __enter__(self) -> object:
             screen.draw_items(self.error, offset=0)
             return State.__enter__(self)
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             if input == ROT_PUSH:
                   self.state = MenuState()
             return self.state
 
 
 class MeasureHrState(State, Measure):
-      def __enter__(self):
+      def __enter__(self) -> object:
             global measuring
             measuring = True
             screen.fill(0)
@@ -153,7 +153,7 @@ class MeasureHrState(State, Measure):
             screen.hr_bpm(self.bpm)
             return
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             self.measure(10)
             self.display_data()
             if input == ROT_PUSH:
@@ -168,22 +168,22 @@ class MeasureHrState(State, Measure):
 
 #Special case where init is used to get the data to be drawn on entry
 class ViewAnalysisState(State):
-      def __init__(self, data):
+      def __init__(self, data: dict):
             self.data = data
 
-      def __enter__(self):
+      def __enter__(self) -> object:
             data = utility.format_data(self.data)
             screen.draw_items(data, offset=0)
             return State.__enter__(self)
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             if input == ROT_PUSH:
                   self.state = MenuState()
             return self.state
 
 
 class HrvAnalysisState(State, Measure):
-      def __enter__(self):
+      def __enter__(self) -> object:
             screen.fill(0)
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
@@ -191,7 +191,7 @@ class HrvAnalysisState(State, Measure):
             return State.__enter__(self)
       
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
             if input == ROT_PUSH:
@@ -212,14 +212,14 @@ class HrvAnalysisState(State, Measure):
 
 
 class KubiosState(State, Measure):
-      def __enter__(self):
+      def __enter__(self) -> object:
             screen.fill(0)
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
             screen.text('Relax ...', 0, 54, 1)
             return State.__enter__(self)
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
             if input == ROT_PUSH:
@@ -242,23 +242,23 @@ class KubiosState(State, Measure):
 
 #Special case where init is used to get the file to be read
 class ReadHistoryState(State):
-      def __init__(self, filename):
+      def __init__(self, filename: str):
             self.file = filename
 
-      def __enter__(self):
+      def __enter__(self) -> object:
             data = historian.read(self.file)
             self.data = utility.format_data(data)
             screen.draw_items(self.data, offset=0)
             return State.__enter__(self)
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             if input == ROT_PUSH:
                   self.state = MenuState()
             return self.state
 
 
 class HistoryState(State):
-      def __enter__(self):
+      def __enter__(self) -> object:
             self.select = 0
             self.items = historian.contents()
             self.items.reverse()
@@ -266,7 +266,7 @@ class HistoryState(State):
             screen.draw_cursor(self.select)
             return State.__enter__(self)
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             if not self.items:
                   self.state = ErrorState('No History')
             elif input == ROT_PUSH:
@@ -279,7 +279,7 @@ class HistoryState(State):
 
 
 class MenuState(State):
-      def __enter__(self):
+      def __enter__(self) -> object:
             self.select = 0
             self.items = ['MEASURE HR', 'HRV ANALYSIS', 'KUBIOS', 'HISTORY']
             self.states = [MeasureHrState, HrvAnalysisState, KubiosState, HistoryState]
@@ -287,7 +287,7 @@ class MenuState(State):
             screen.draw_cursor(self.select)
             return State.__enter__(self)
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             if input == ROT_PUSH:
                   self.state = self.states[self.select]()
             elif input == ROTB:
@@ -303,7 +303,7 @@ class PulseCheck:
             self.next_state = initial_state
             self.fifo = fifo
 
-      def get_input(self):
+      def get_input(self) -> int | None:
             if self.fifo.empty():
                   return None
             return self.fifo.get()

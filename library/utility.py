@@ -34,7 +34,7 @@ def format_kubios_message(ppi: list) -> dict:
             return data
 
 
-def calculate_plotting_values(samples: list):
+def calculate_plotting_values(samples: list) -> tuple[int, float]:
       #Calculate scaling factor
       max_list = max(samples)
       min_list = min(samples)
