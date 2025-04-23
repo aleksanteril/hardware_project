@@ -2,9 +2,8 @@
 ### Things to do and explore
 ---
 ### The Main Program
-
-- Multithreading needs some exploration, it's a bit buggy right now but with a try expect hack it runs stable
 - Need to run for long time to test stability
+- The core exception problems probably come from the I2C bus writing, both of the cores write stuff to the I2C bus. probably a fix is so that only one core writes data to the bus completly!
 ---
 ### The Algorithm
 
@@ -13,7 +12,6 @@
 ---
 ### Networking
 
-- Send hr-data topic is ready
 - Kubios send and receive is being investigated by jesse
 - Online object needs to be integrated into the main code
 
