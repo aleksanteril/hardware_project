@@ -1,5 +1,10 @@
 from peripherals import Button, Rotary, Screen, Isr_fifo
-import time, analysis, utility, _thread
+from led import Led
+import time, analysis, utility, gc
+from historian import History
+from template_state import State
+'''This file contains the state machines nodes that are running on the PulseCheck'''
+
 
 #Pin declarations
 ROTA = 10
@@ -15,24 +20,20 @@ ADC = 26
 screen = Screen(OLED_DA, OLED_CLK)
 adc = Isr_fifo(10, ADC)
 
+measuring = False
+
+
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
+      global measuring
       while True:
-            screen.show()
-
-#Template state class
-class State:
-      def __enter__(self):
-            global ROTB
-            global ROT_PUSH
-            self.state = self
-            return self
-
-      def run(self):
-            pass
-
-      def __exit__(self, exc_type, exc_value, traceback):
-            pass
+            try:
+                  if measuring: #Hack to fix the flickering bpm value :(
+                        screen.draw_bpm()
+                  screen.show()
+            except:
+                  print('Core1 exception!')
+            gc.collect()
 
 #Class for states with measuring functionality
 class Measure:
@@ -46,31 +47,32 @@ class Measure:
             #Samples: for drawing and threshold calculating
             self.samples, self.PPI = [], []
             self.x, self.y = 0, 0
+            self.got_data = False
             #Start sample reading
             adc.init_timer(250)
 
-      def read_sample_to_list(self) -> bool:
+      def _read_sample_to_list(self) -> bool:
             if adc.empty():
                   return False
             self.samples.append(adc.get())
             return True
 
-      def measure(self, MAX_PPI_SIZE):
-            if not self.read_sample_to_list():
+      def measure(self, MAX_PPI_SIZE: int):
+            if not self._read_sample_to_list():
                   return
             self.sample_num += 1
-            if len(self.samples) < 500:
+            if len(self.samples) <= 500:
+                  self.got_data = True
                   return
 
-            if len(self.samples) > 500:
-                  del self.samples[0]
-
-            self.find_ppi()
+            del self.samples[0]
+            self._find_ppi()
             if len(self.PPI) > MAX_PPI_SIZE:
                   del self.PPI[0]
 
             if self.sample_num % 250 == 0:
                   self.max_list, self.scale_fc = utility.calculate_plotting_values(self.samples[:250])
+            self.got_data = True
             return
 
       def accept_ppi_to_list(self, ppi: int):
@@ -80,7 +82,7 @@ class Measure:
                   self.PPI.append(ppi)
             return
 
-      def find_ppi(self):
+      def _find_ppi(self):
             threshold = (sum(self.samples) / len(self.samples))*1.025
             sample = self.samples[-1]
 
@@ -97,38 +99,47 @@ class Measure:
                   self.edge = False
                   return
             return
+      
+      def display_data(self):
+            if self.sample_num < 750 or self.sample_num % 5 != 0 or not self.got_data:
+                  return
+            self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
+            self.y = min(max(0, self.y), 31)
+            screen.hr_plot_pos(self.x, self.y)
+            screen.draw_hr()
+            self.x = (self.x + 1) % screen.width
+            self.got_data = False
+            return
 
 
 ##State machine states start here
 class MeasureHrState(State, Measure):
-      def __enter__(self):
+      def __enter__(self) -> object:
+            global measuring
+            measuring = True
             screen.fill(0)
             self.bpm = 0
             return State.__enter__(self)
 
       def display_data(self):
-            self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
-            self.y = min(max(0, self.y), 31)
+            Measure.display_data(self)
             if self.PPI:
                   self.bpm = round(analysis.mean_hr(self.PPI))
-            screen.hr_plot_pos(self.x, self.y)
-            screen.draw_hr()
             screen.hr_bpm(self.bpm)
-            screen.draw_bpm()
-            self.x = (self.x + 1) % screen.width
+            return
 
-      def run(self, input):
+      def run(self, input: int | None) -> object:
             self.measure(10)
-            if len(self.samples) > 250 and self.sample_num % 8 == 0:
-                  self.display_data()
+            self.display_data()
             #if input == ROT_PUSH:
                   #self.state = MenuState()
             return self.state
 
       def __exit__(self, exc_type, exc_value, traceback):
+            global measuring
+            measuring = False
             adc.deinit_timer()
             return
-      
 
 
 #The runner
