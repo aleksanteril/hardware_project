@@ -41,7 +41,7 @@ def core1_thread():
 
 
 #Class for states with measuring functionality
-class Measure:
+class Measure(State):
       def __init__(self):
             #For peak find algorithm
             self.edge = False
@@ -108,7 +108,7 @@ class Measure:
             if self.sample_num < 750 or self.sample_num % 5 != 0 or not self.got_data:
                   return
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
-            self.y = min(max(0, self.y), 31)
+            self.y = min(max(0, self.y), 41)
             screen.hr_plot_pos(self.x, self.y)
             self.x = (self.x + 1) % screen.width
             self.got_data = False
@@ -116,6 +116,7 @@ class Measure:
       
       def __exit__(self, exc_type, exc_value, traceback):
             screen.hr_plot_pos(-1, 16) #To fix wild pixel upon re-entering measuring
+            screen.hr_bpm(0)
             adc.deinit_timer()
             return
 
@@ -136,11 +137,11 @@ class ErrorState(State):
             return self.state
 
 
-class MeasureHrState(State, Measure):
+class MeasureHrState(Measure):
       def __enter__(self) -> object:
             screen.set_mode(0)
             self.bpm = 0
-            return State.__enter__(self)
+            return super().__enter__()
 
       def display_data(self):
             Measure.display_data(self)
@@ -156,10 +157,6 @@ class MeasureHrState(State, Measure):
                   self.state = MenuState()
             return self.state
 
-      def __exit__(self, exc_type, exc_value, traceback):
-            Measure.__exit__(self, exc_type, exc_value, traceback)
-            screen.hr_bpm(0)
-            return
 
 #Special case where init is used to get the data to be drawn on entry
 class ViewAnalysisState(State):
@@ -178,12 +175,12 @@ class ViewAnalysisState(State):
             return self.state
 
 
-class HrvAnalysisState(State, Measure):
+class HrvAnalysisState(Measure):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
             screen.set_mode(2)
-            return State.__enter__(self)
+            return super().__enter__()
       
 
       def run(self, input: int | None) -> object:
@@ -200,18 +197,14 @@ class HrvAnalysisState(State, Measure):
                   except:
                         self.state = ErrorState('Bad data')
             return self.state
-      
-      def __exit__(self, exc_type, exc_value, traceback):
-            Measure.__exit__(self, exc_type, exc_value, traceback)
-            return
 
 
-class KubiosState(State, Measure):
+class KubiosState(Measure):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
             screen.set_mode(2)
-            return State.__enter__(self)
+            return super().__enter__()
 
       def run(self, input: int | None) -> object:
             self.measure(30)
@@ -229,10 +222,6 @@ class KubiosState(State, Measure):
                   except:
                         self.state = ErrorState('Upload failed!')
             return self.state
-
-      def __exit__(self, exc_type, exc_value, traceback):
-            Measure.__exit__(self, exc_type, exc_value, traceback)
-            return
 
 #Special case where init is used to get the file to be read
 class ReadHistoryState(State):

@@ -38,7 +38,7 @@ def calculate_plotting_values(samples: list) -> tuple[int, float]:
       #Calculate scaling factor
       max_list = max(samples)
       min_list = min(samples)
-      scale_fc = 32 / (max_list - min_list)
+      scale_fc = 42 / (max_list - min_list)
       return max_list, scale_fc
 
 
