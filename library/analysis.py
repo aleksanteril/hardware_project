@@ -1,4 +1,5 @@
 from math import sqrt
+from time import mktime, localtime
 
 '''This file contains all mathematical functions for calculating the HRV parameters locally'''
 
@@ -34,3 +35,19 @@ def sdnn(ppi: list) -> float:
             sum += (rr - mean_rr)**2
       sdnn = sqrt(sum / (len(ppi)-1))
       return sdnn
+
+def full(ppi: list) -> dict:
+      stamp = mktime(localtime())
+      mean_ppi_ = round(mean_ppi(ppi))
+      rmssd_ = round(rmssd(ppi))
+      sdnn_ = round(sdnn(ppi))
+      mean_hr_ = round(mean_hr(ppi))
+      data = {
+                  "id": stamp,
+                  "timestamp": stamp,
+                  "mean_hr": mean_hr_,
+                  "mean_ppi": mean_ppi_,
+                  "rmssd": rmssd_,
+                  "sdnn": sdnn_
+            }
+      return data
