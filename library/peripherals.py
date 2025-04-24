@@ -71,7 +71,7 @@ class Screen(SSD1306_I2C):
                   elif self.items_request:
                         self._draw_items()
                         self.items_request = False
-                  #Screen modes, 0 = active measuring, 1 = menu mode, 2 = analysis measuring, 3 = static view
+                  #Screen modes, 0 = active measuring, 1 = menu mode, 2 = analysis measuring, 3 = static view, 4 = loading anim
                   elif self.mode == 0:
                         self._draw_measure()
                         self._draw_bpm()
@@ -83,6 +83,9 @@ class Screen(SSD1306_I2C):
                         self.text(f'Analysing {self.dots_str}', 0, 56, 1)
                   elif self.mode == 3:
                         pass
+                  elif self.mode == 4:
+                        self._draw_dot_animation()
+                        self.text(f'{self.dots_str}', 0, 56, 1)
             #Buggy shit, use this to keep from crashing still :(
             try:
                   self.show()
@@ -126,10 +129,10 @@ class Screen(SSD1306_I2C):
             return
       
       
-      #Screen modes, 0 = measuring, 1 = menu mode, 2 = static view
+      #Screen modes, 0 = measuring, 1 = menu mode, 2 = analysis view, 3 = static view, 4 = loading anim
       def set_mode(self, mode: int):
-            if mode < 0 or mode > 3:
-                  raise ValueError('Screen mode not correct, 0 = Measuring, 1 = Menu, 2 = Analysis view, 3 = Static view')
+            if mode < 0 or mode > 4:
+                  raise ValueError('Screen mode not correct, 0 = Measuring, 1 = Menu, 2 = Analysis view, 3 = Static view, 4 = Loading anim')
             self.empty()
             with lock:
                   self.mode = mode

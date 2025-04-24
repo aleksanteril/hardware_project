@@ -4,6 +4,7 @@ from led import Led
 import time, analysis, utility, gc
 from historian import History
 from template_state import State
+from online import Online
 '''This file contains the state machines nodes that are running on the PulseCheck'''
 
 
@@ -23,6 +24,9 @@ fifo = Fifo(50, 'h')
 
 #Create the historian for local saving
 historian = History()
+
+#Create online communications object
+online = Online("KMD657_Group_1", "ykasonni123", "192.168.1.253")
 
 #Create hardware objects
 button = Button(ROT_PUSH, fifo)
@@ -87,7 +91,7 @@ class Measure(State):
             return
 
       def _find_ppi(self):
-            threshold = (sum(self.samples) / len(self.samples))*1.025
+            threshold = (sum(self.samples) / len(self.samples))*1.05
             sample = self.samples[-1]
 
             #Rising edge detected, appends to PPI list if the value is acceptable
@@ -182,6 +186,16 @@ class HrvAnalysisState(Measure):
             screen.set_mode(2)
             return super().__enter__()
       
+      def analysis(self) -> object:
+            try:
+                  data = analysis.full(self.PPI)
+                  historian.write(data)
+                  self.state = ViewAnalysisState(data)
+                  if online.is_connected():
+                        online.send_local(data)
+            except:
+                  self.state = ErrorState('Bad data')
+            return self.state
 
       def run(self, input: int | None) -> object:
             self.measure(30)
@@ -190,14 +204,29 @@ class HrvAnalysisState(Measure):
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
-                  try:
-                        data = analysis.full(self.PPI)
-                        historian.write(data)
-                        self.state = ViewAnalysisState(data)
-                  except:
-                        self.state = ErrorState('Bad data')
+                  self.state = self.analysis()
             return self.state
 
+class KubiosWaitMsgState(State):
+      def __enter__(self) -> object:
+            self.start_time = time.ticks_ms()
+            self.timeout = 20000 #ms
+            screen.items(['Waiting', 'for kubios'], offset=0)
+            screen.set_mode(4)
+            return super().__enter__()
+      
+      def run(self, input: int | None) -> object:
+            if not online.is_connected(): #Failsafe if connection is lost while in the state
+                  self.state = ErrorState('Not online!')
+            data = online.listen_kubios()
+            if data != None:
+                  #*TODO* Data has to be parsed here to format
+                  historian.write(data)
+                  self.state = ViewAnalysisState(data)
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState('Kubios not reached')
+            return self.state
+      
 
 class KubiosState(Measure):
       def __enter__(self) -> object:
@@ -209,18 +238,15 @@ class KubiosState(Measure):
       def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
-            if input == ROT_PUSH:
+            if not online.is_connected():
+                  self.state = ErrorState('Not online!')
+            elif input == ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
-                  try:
-                        data = utility.format_kubios_message(self.PPI)
-                        #data = send_kubios(data)
-                        #historian.write(data)
-                        self.state = ViewAnalysisState(data)
-                        pass
-                  except:
-                        self.state = ErrorState('Upload failed!')
+                  data = utility.format_kubios_message(self.PPI)
+                  online.send_kubios(data)
+                  self.state = KubiosWaitMsgState()
             return self.state
 
 #Special case where init is used to get the file to be read
@@ -283,9 +309,30 @@ class MenuState(State):
             return self.state
 
 
+class ConnectState(State):
+      def __enter__(self) -> object:
+            self.start_time = time.ticks_ms()
+            self.timeout = 10000 #ms
+            rotary.disable() #Rotary must be disabled because online contains a sleep for 20ms, to prevent user fking up
+            screen.items(['Connecting', 'to cosmos'], offset=0)
+            screen.set_mode(4)
+            return super().__enter__()
+      
+      def run(self, input: int | None) -> object:
+            if online.connect():
+                  self.state = MenuState()
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState('Wi-Fi not found')
+            return self.state
+      
+      def __exit__(self, exc_type, exc_value, traceback):
+            rotary.enable() #Enable rotary upon exit
+            return
+
+
 #The runner
 class PulseCheck:
-      def __init__(self, fifo=fifo, initial_state=MenuState()):
+      def __init__(self, fifo=fifo, initial_state=ConnectState()):
             self.next_state = initial_state
             self.fifo = fifo
 

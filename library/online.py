@@ -80,7 +80,8 @@ class Online:
             client.publish(topic, data)
         except Exception as e:
             raise Exception(f"Failed to send MQTT message: {e}")
-            
+    
+    #*TODO* This method needs to ping and confirm that connection is ok *TODO*
     def is_connected(self) -> bool:
         return self.connected
 
@@ -97,8 +98,8 @@ class Online:
         try:
             self.kubios_msg = ujson.loads(msg)
         except Exception as e:
-            raise Exception(f"Failed to parse message: {e}")
             self.kubios_msg = None
+            raise Exception(f"Failed to parse message: {e}")
         return
 
     # Send HRV data to kubios and receive the data message returned by kubios

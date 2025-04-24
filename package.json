@@ -12,6 +12,7 @@
         ["lib/historian.py", "http://localhost:8000/library/historian.py"],
         ["lib/utility.py", "http://localhost:8000/library/utility.py"],
         ["lib/peripherals.py", "http://localhost:8000/library/peripherals.py"],
+        ["lib/online.py", "http://localhost:8000/library/online.py"],
         ["lib/template_state.py", "http://localhost:8000/library/template_state.py"]
       ],
       "deps": [
