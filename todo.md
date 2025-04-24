@@ -12,7 +12,9 @@
 ---
 ### Networking
 
-- Kubios send and receive is being investigated by jesse
 - Online object needs to be integrated into the main code
+- Connect online state
+- Send data to online state (if online)
+- read data from kubios if kubios meas and online
 
 ---
