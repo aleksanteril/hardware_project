@@ -70,7 +70,6 @@ class Online:
             return client
         except Exception as e:
             raise Exception(f"Failed to connect to MQTT: {e}")
-            return None
 
     # Send MQTT message method
     def send_mqtt_message(self, client: object | None, topic: str, data: list):  # Try sending a message when method is called upon. If no connection, give error.
