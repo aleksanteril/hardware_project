@@ -18,6 +18,7 @@ LED1 = 22
 LED2 = 21
 LED3 = 20
 ADC = 26
+SW0 = 7
 
 #Create fifo for input events, signed short needed for rotary
 fifo = Fifo(50, 'h')
@@ -29,6 +30,8 @@ historian = History()
 online = Online("KMD657_Group_1", "ykasonni123", "192.168.1.253")
 
 #Create hardware objects
+switch = Button(SW0, fifo)
+switch.enable_irq()
 button = Button(ROT_PUSH, fifo)
 button.enable_irq()
 rotary = Rotary(ROTA, ROTB, fifo)
@@ -300,7 +303,9 @@ class MenuState(State):
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
-            if input == ROT_PUSH:
+            if input == SW0:
+                  self.state = ConnectState()
+            elif input == ROT_PUSH:
                   self.state = self.states[self.select]()
             elif input == ROTB:
                   self.select += fifo.get()
