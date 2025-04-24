@@ -1,4 +1,5 @@
 from time import localtime, mktime
+import re
 
 def format_filenames(files: list) -> list:
       formatted = []
@@ -45,3 +46,10 @@ def calculate_plotting_values(samples: list) -> tuple[int, float]:
 def plot_sample(sample: int, max_list: int, scale_fc: float) -> int:
       pos = (sample - max_list) * scale_fc * -1
       return round(pos)
+
+
+#*TODO* Read parameters wifi params from a txt file using regex
+def read_wifi_file() -> list:
+      with open('/settings.txt') as file:
+            pass
+             
