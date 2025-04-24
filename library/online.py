@@ -20,6 +20,7 @@ class Online:
         self.connected = False
         self.local_mqtt = None
         self.kubios_mqtt = None
+        self.last_kubios_msg = None # Storing the last message here
         
         # Connect to WLAN and MQTT automatically on object creation
         if self.connect_wlan():
@@ -27,6 +28,11 @@ class Online:
             ntptime.settime()
             self.local_mqtt = self.connect_mqtt('local', 1883)
             self.kubios_mqtt = self.connect_mqtt('kubios', 21883)
+            
+            if self.kubios_mqtt: # If connected subscribe to correct topic early
+                self.kubios_mqtt.set_callback(self._kubios_callback) # Calling the class method for callback
+                self.kubios_mqtt.subscribe('kubios-response')
+            
         print(time.localtime())
 
     def connect_wlan(self) -> bool:  # Connect to WLAN method, try 10 times.
@@ -72,18 +78,34 @@ class Online:
     def is_connected(self) -> bool:
         return self.connected
 
-    
-    # Send HRV data to kubios and receive the data returned by kubios (UNDER DEVELOPMENT)
+    # Method for listening and awaiting a response from kubios
+    def listen_kubios(self, timeout=5):
+        print("Awaiting kubios response...")
+        start = time.time()
+        while time.time() - start < timeout:
+            self.kubios_mqtt.check_msg()
+            time.sleep(0.1)
+
+    def _kubios_callback(self, topic, msg):
+        print(f"[Callback] Topic: {topic.decode()}, Message: {msg.decode()}")
+        try:
+            self.last_kubios_msg = ujson.loads(msg)
+        except Exception as e:
+            print(f"Failed to parse message: {e}")
+            self.last_kubios_msg = None
+
+    # Send HRV data to kubios and receive the data message returned by kubios
     def send_kubios(self, data: dict) -> dict:
         data = ujson.dumps(data)
-        self.kubios_mqtt.subscribe('kubios-response', data)
         self.send_mqtt_message(self.kubios_mqtt,'kubios-request', data)
+        self.listen_kubios()
+        return self.last_kubios_msg
     
     # Send data locally to hr-data topic
     def send_local(self, data: dict):
         data = ujson.dumps(data)
         self.send_mqtt_message(self.kubios_mqtt,'hr-data', data)
-        
+
 # Kubios test data
 k_data = {
     "id": 787,
@@ -91,6 +113,7 @@ k_data = {
     "data": [828, 836, 852, 760, 800, 796, 856, 824, 808, 776, 724, 816, 800, 812, 812, 812, 756, 820, 812, 800],
     "analysis": { "type": "readiness"}
   }
+
 # Local HR test data
 hr_data = {
     "id": 123,
@@ -101,6 +124,6 @@ hr_data = {
 # Object creation
 connect = Online("KMD657_Group_1", "ykasonni123", "192.168.1.253")
 
-# Method call to send HR data
-connect.send_local(hr_data)
 
+response = connect.send_kubios(k_data)
+print("Kubios Analysis:", response)
