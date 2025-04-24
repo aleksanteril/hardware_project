@@ -247,6 +247,7 @@ class KubiosState(Measure):
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
+                  self.PPI = analysis.preprocess_ppi(self.PPI)
                   data = utility.format_kubios_message(self.PPI)
                   online.send_kubios(data)
                   self.state = KubiosWaitMsgState()
