@@ -79,6 +79,7 @@ class Online:
         try:
             client.publish(topic, data)
         except Exception as e:
+            self.connected = False
             raise Exception(f"Failed to send MQTT message: {e}")
     
     #*TODO* This method needs to ping and confirm that connection is ok *TODO*
