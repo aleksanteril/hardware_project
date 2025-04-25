@@ -73,12 +73,13 @@ class Measure(State):
             if not self._read_sample_to_list():
                   return
             self.sample_num += 1
-            if len(self.samples) <= 500:
+            if len(self.samples) < 500:
                   self.got_data = True
                   return
 
-            del self.samples[0]
             self._find_ppi()
+
+            del self.samples[0]
             if len(self.PPI) > MAX_PPI_SIZE:
                   del self.PPI[0]
 
@@ -112,7 +113,7 @@ class Measure(State):
             return
       
       def display_data(self):
-            if self.sample_num < 750 or self.sample_num % 5 != 0 or not self.got_data:
+            if self.sample_num < 500 or self.sample_num % 5 != 0 or not self.got_data:
                   return
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
             self.y = min(max(0, self.y), 41)
