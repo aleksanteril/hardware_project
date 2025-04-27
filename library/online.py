@@ -83,6 +83,7 @@ class Online:
     
     #*TODO* This method needs to ping and confirm that connection is ok *TODO*
     def is_connected(self) -> bool:
+        self.connected = self.wlan.isconnected()
         return self.connected
 
     # Method for listening and awaiting a response from kubios
