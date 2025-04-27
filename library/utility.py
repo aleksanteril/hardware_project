@@ -49,7 +49,7 @@ def plot_sample(sample: int, max_list: int, scale_fc: float) -> int:
 
 
 #*TODO* Read parameters wifi params from a txt file using regex
-def read_wifi_file() -> list:
+def read_wifi_file() -> tuple:
       with open('/settings.txt') as file:
             pass
              
