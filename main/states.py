@@ -112,7 +112,6 @@ class Measure(State):
                   self.prev_peak_time = self.peak_time
                   self.edge = False
                   self.MARGIN = 1
-                  return
             return
       
       def display_data(self):

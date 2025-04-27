@@ -32,6 +32,8 @@ def format_kubios_message(ppi: list) -> dict:
                   }
             return data
 
+def parse_kubios_message(data: dict) -> dict:
+      pass
 
 def calculate_plotting_values(samples: list) -> tuple[int, float]:
       #Calculate scaling factor
