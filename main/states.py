@@ -54,6 +54,7 @@ class Measure(State):
             self.edge = False
             self.peak_time = time.ticks_ms()
             self.prev_peak_time = time.ticks_ms()
+            self.MARGIN = 1
             #For plotting the screen
             self.max_list, self.scale_fc, self.sample_num = 0, 0, 0
             #Samples: for drawing and threshold calculating
@@ -95,7 +96,7 @@ class Measure(State):
             return
 
       def _find_ppi(self):
-            threshold = (sum(self.samples) / len(self.samples))*1.05
+            threshold = (sum(self.samples) / len(self.samples))*1.02*self.MARGIN
             sample = self.samples[-1]
 
             #Rising edge detected, appends to PPI list if the value is acceptable
@@ -103,12 +104,14 @@ class Measure(State):
                   self.peak_time = time.ticks_ms()
                   self.edge = True
                   self.accept_ppi_to_list(time.ticks_diff(self.peak_time, self.prev_peak_time))
+                  self.MARGIN = 0.975
                   return
             
             #Falling under threshold with detection flag on, reset.
             elif sample < threshold and self.edge:
                   self.prev_peak_time = self.peak_time
                   self.edge = False
+                  self.MARGIN = 1
                   return
             return
       
