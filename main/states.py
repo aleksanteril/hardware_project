@@ -186,6 +186,7 @@ class ViewAnalysisState(State):
             self.data = data
 
       def __enter__(self) -> object:
+            historian.write(self.data)
             data = utility.format_data(self.data)
             screen.items(data, offset=0)
             screen.set_mode(3)
@@ -207,7 +208,6 @@ class HrvAnalysisState(Measure):
       def analysis(self) -> object:
             try:
                   data = analysis.full(self.PPI)
-                  historian.write(data)
                   self.state = ViewAnalysisState(data)
             except:
                   self.state = ErrorState('Bad data')
@@ -238,7 +238,6 @@ class KubiosWaitMsgState(State):
                   self.state = ErrorState('Kubios not reached')
             elif data != None:
                   data = utility.parse_kubios_message(data)
-                  historian.write(data)
                   self.state = ViewAnalysisState(data)
             return self.state
       
