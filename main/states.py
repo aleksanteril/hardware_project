@@ -168,6 +168,19 @@ class MeasureHrState(Measure):
             return self.state
 
 
+class UploadToLocal(State):
+      def __init__(self, data: dict):
+            self.data = data
+
+      def run(self, input: int | None) -> object:
+            try:
+                  online.send_local(self.data)
+                  self.state = MenuState()
+            except:
+                  self.state = ErrorState('Local upload fail')
+            return self.state
+
+
 #Special case where init is used to get the data to be drawn on entry
 class ViewAnalysisState(State):
       def __init__(self, data: dict):
@@ -181,7 +194,7 @@ class ViewAnalysisState(State):
 
       def run(self, input: int | None) -> object:
             if input == ROT_PUSH:
-                  self.state = MenuState()
+                  self.state = UploadToLocal(self.data)
             return self.state
 
 
@@ -197,8 +210,6 @@ class HrvAnalysisState(Measure):
                   data = analysis.full(self.PPI)
                   historian.write(data)
                   self.state = ViewAnalysisState(data)
-                  if online.is_connected():
-                        online.send_local(data)
             except:
                   self.state = ErrorState('Bad data')
             return self.state
@@ -227,7 +238,6 @@ class KubiosWaitMsgState(State):
                   self.state = ErrorState('Kubios not reached')
             elif data != None:
                   data = utility.parse_kubios_message(data)
-                  online.send_local(data)
                   historian.write(data)
                   self.state = ViewAnalysisState(data)
             return self.state
@@ -257,7 +267,9 @@ class KubiosState(Measure):
       def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
-            if input == ROT_PUSH:
+            if not online.is_connected():
+                  self.state = ErrorState('No connection')
+            elif input == ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
