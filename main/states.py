@@ -223,13 +223,13 @@ class KubiosWaitMsgState(State):
       
       def run(self, input: int | None) -> object:
             data = online.listen_kubios()
-            if data != None:
+            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState('Kubios not reached')
+            elif data != None:
                   data = utility.parse_kubios_message(data)
                   online.send_local(data)
                   historian.write(data)
                   self.state = ViewAnalysisState(data)
-            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  self.state = ErrorState('Kubios not reached')
             return self.state
       
 
@@ -239,20 +239,29 @@ class KubiosState(Measure):
             self.timeout = 30000 #ms
             screen.set_mode(2)
             return super().__enter__()
+      
+      def process_and_send(self) -> object:
+            try:
+                  self.PPI = analysis.preprocess_ppi(self.PPI)
+                  data = utility.format_kubios_message(self.PPI)
+            except:
+                  self.state = ErrorState('Bad data')
+                  return self.state
+            try:
+                  online.send_kubios(data)
+                  self.state = KubiosWaitMsgState()
+            except:
+                  self.state = ErrorState('No connection')
+            return self.state
 
       def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
-            if not online.is_connected():
-                  self.state = ErrorState('Not online!')
-            elif input == ROT_PUSH:
+            if input == ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   adc.deinit_timer()
-                  self.PPI = analysis.preprocess_ppi(self.PPI)
-                  data = utility.format_kubios_message(self.PPI)
-                  online.send_kubios(data)
-                  self.state = KubiosWaitMsgState()
+                  self.state = self.process_and_send()
             return self.state
 
 #Special case where init is used to get the file to be read
@@ -331,10 +340,10 @@ class ConnectState(State):
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
-            if online.connect():
-                  self.state = MenuState()
-            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   self.state = ErrorState('Wi-Fi not found')
+            elif online.connect():
+                  self.state = MenuState()
             return self.state
       
       def __exit__(self, exc_type, exc_value, traceback):
