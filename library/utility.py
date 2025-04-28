@@ -38,12 +38,13 @@ def parse_kubios_message(data: dict) -> dict:
       data = {
                   "id": stamp,
                   "timestamp": stamp,
-                  "mean_hr": data['mean_hr_bpm'],
-                  "mean_ppi": data['mean_rr_ms'],
-                  "rmssd": data['rmssd_ms'],
-                  "sdnn": data['sdnn_ms'],
-                  "sns": data['sns_index'],
-                  "pns": data['pns_index']
+                  "mean_hr": round(data['mean_hr_bpm']),
+                  "mean_ppi": round(data['mean_rr_ms']),
+                  "rmssd": round(data['rmssd_ms']),
+                  "sdnn": round(data['sdnn_ms']),
+                  "sns": f'{data["sns_index"]:.2f}',
+                  "pns": f'{data["pns_index"]:.2f}',
+                  "phys_age": data['physiological_age']
             }
       return data
 
