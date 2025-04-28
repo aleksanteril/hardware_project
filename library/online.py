@@ -43,7 +43,7 @@ class Online:
     
     def connect(self) -> bool:
         if not self.wlan.isconnected():
-            sleep_ms(50) #Must sleep to await response
+            sleep_ms(75) #Must sleep to await response
             return False
         
         #Time server
