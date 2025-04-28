@@ -222,11 +222,10 @@ class KubiosWaitMsgState(State):
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
-            if not online.is_connected(): #Failsafe if connection is lost while in the state
-                  self.state = ErrorState('Not online!')
             data = online.listen_kubios()
             if data != None:
-                  #*TODO* Data has to be parsed here to format
+                  data = utility.parse_kubios_message(data)
+                  online.send_local(data)
                   historian.write(data)
                   self.state = ViewAnalysisState(data)
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
@@ -304,10 +303,14 @@ class MenuState(State):
             screen.items(self.items)
             screen.cursor_pos(self.select)
             screen.set_mode(1)
+            if online.is_connected():
+                  led1.on()
+            else:
+                  led1.off()
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
-            if input == SW0:
+            if input == SW0 and not online.is_connected():
                   self.state = ConnectState()
             elif input == ROT_PUSH:
                   self.state = self.states[self.select]()
@@ -321,7 +324,7 @@ class MenuState(State):
 class ConnectState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
-            self.timeout = 10000 #ms
+            self.timeout = 15000 #ms
             rotary.disable() #Rotary must be disabled because online contains a sleep for 20ms, to prevent user fking up
             screen.items(['Connecting', 'to cosmos'], offset=0)
             screen.set_mode(4)

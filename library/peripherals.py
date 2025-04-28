@@ -40,12 +40,12 @@ class Screen(SSD1306_I2C):
       
       def _draw_items(self):
             for i in range(len(self.items_)):
-                  self.text(self.items_[i], self.offset, i*10, 1)
+                  self.text(self.items_[i], self.offset, i*8, 1)
             return
       
       def _draw_cursor(self):
             self.fill_rect(0, 0, 10, 64, 0)
-            self.text('>', 0, self.pos*10, 1)
+            self.text('>', 0, self.pos*8, 1)
             return
       
       def _draw_measure(self):

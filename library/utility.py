@@ -33,7 +33,19 @@ def format_kubios_message(ppi: list) -> dict:
             return data
 
 def parse_kubios_message(data: dict) -> dict:
-      pass
+      stamp = mktime(localtime())
+      data = data['data']['analysis']
+      data = {
+                  "id": stamp,
+                  "timestamp": stamp,
+                  "mean_hr": data['mean_hr_bpm'],
+                  "mean_ppi": data['mean_rr_ms'],
+                  "rmssd": data['rmssd_ms'],
+                  "sdnn": data['sdnn_ms'],
+                  "sns": data['sns_index'],
+                  "pns": data['pns_index']
+            }
+      return data
 
 def calculate_plotting_values(samples: list) -> tuple[int, float]:
       #Calculate scaling factor
