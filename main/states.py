@@ -167,7 +167,7 @@ class MeasureHrState(Measure):
                   self.state = MenuState()
             return self.state
 
-
+#Special case where init is used to get the data to be uploaded to local server history
 class UploadToLocal(State):
       def __init__(self, data: dict):
             self.data = data
@@ -179,7 +179,6 @@ class UploadToLocal(State):
             except:
                   self.state = ErrorState('Local upload fail')
             return self.state
-
 
 #Special case where init is used to get the data to be drawn on entry
 class ViewAnalysisState(State):
@@ -224,6 +223,7 @@ class HrvAnalysisState(Measure):
                   self.state = self.analysis()
             return self.state
 
+
 class KubiosWaitMsgState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
@@ -251,12 +251,14 @@ class KubiosState(Measure):
             return super().__enter__()
       
       def process_and_send(self) -> object:
+            #Preprocess data for sending
             try:
                   self.PPI = analysis.preprocess_ppi(self.PPI)
                   data = utility.format_kubios_message(self.PPI)
             except:
                   self.state = ErrorState('Bad data')
                   return self.state
+            #Send data to kubios
             try:
                   online.send_kubios(data)
                   self.state = KubiosWaitMsgState()
