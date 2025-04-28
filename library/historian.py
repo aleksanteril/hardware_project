@@ -54,7 +54,7 @@ class History:
       #Keep the size of the /history folder within limits
       def _folder_manager(self):
             files = os.listdir(f'./{self._dir}')
-            if len(files) > 5:
+            if len(files) > 6:
                   files.sort()
                   os.remove(f'./{self._dir}/{files[0]}')
             return
