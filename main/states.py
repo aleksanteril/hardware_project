@@ -104,7 +104,7 @@ class Measure(State):
                   self.peak_time = time.ticks_ms()
                   self.edge = True
                   self.accept_ppi_to_list(time.ticks_diff(self.peak_time, self.prev_peak_time))
-                  self.MARGIN = 0.975
+                  self.MARGIN = 0.97
                   return
             
             #Falling under threshold with detection flag on, reset.
@@ -227,18 +227,18 @@ class HrvAnalysisState(Measure):
 class KubiosWaitMsgState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
-            self.timeout = 20000 #ms
+            self.timeout = 5000 #ms
             screen.items(['Waiting', 'for kubios'], offset=0)
             screen.set_mode(4)
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
             data = online.listen_kubios()
-            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  self.state = ErrorState('Kubios not reached')
-            elif data != None:
+            if data != None:
                   data = utility.parse_kubios_message(data)
                   self.state = ViewAnalysisState(data)
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState('Kubios not reached')
             return self.state
       
 
@@ -353,10 +353,10 @@ class ConnectState(State):
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
-            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  self.state = ErrorState('Wi-Fi not found')
-            elif online.connect():
+            if online.connect():
                   self.state = MenuState()
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState('Wi-Fi not found')
             return self.state
       
       def __exit__(self, exc_type, exc_value, traceback):
