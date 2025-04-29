@@ -234,7 +234,7 @@ class KubiosWaitMsgState(State):
       
       def run(self, input: int | None) -> object:
             data = online.listen_kubios()
-            if data != None:
+            if data != None and data['data'] != 'Invalid request':
                   data = utility.parse_kubios_message(data)
                   self.state = ViewAnalysisState(data)
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
