@@ -60,9 +60,12 @@ def plot_sample(sample: int, max_list: int, scale_fc: float) -> int:
       pos = (sample - max_list) * scale_fc * -1
       return round(pos)
 
-
-#*TODO* Read parameters wifi params from a txt file using regex
-def read_wifi_file() -> tuple:
-      with open('/settings.txt') as file:
-            pass
+#Read parameters wifi params from a txt file using regex
+def read_wifi_file() -> dict:
+      parameters = {}
+      with open('/settings.txt', 'r') as file:
+            for line in file:
+                  match = re.search('(\w+)=(\w+)', line)
+                  parameters[match.groups()[0]] = match.groups()[1]
+      return parameters
              
