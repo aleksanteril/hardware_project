@@ -15,9 +15,9 @@ def format_data(data: dict) -> list:
       formatted = []
       for d in data:
             if d == 'timestamp': #Ajan formatointi h:m, lisää nollia minuutteihin
-                  data[d] = localtime(data[d])
-                  data[d] = f'{data[d][3]}:{'{:0>{w}}'.format(str(data[d][4]), w=2)}'
-                  formatted.insert(0, f'TIME: {data[d]}')
+                  time = localtime(data[d])
+                  time = f'{time[3]}:{'{:0>{w}}'.format(str(time[4]), w=2)}'
+                  formatted.insert(0, f'TIME: {time}')
             elif d != 'id': #Print all but id
                   formatted.append(f'{d.upper()}: {data[d]}')
       return formatted
