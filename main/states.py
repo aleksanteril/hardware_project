@@ -104,7 +104,7 @@ class Measure(State):
                   self.peak_time = time.ticks_ms()
                   self.edge = True
                   self.accept_ppi_to_list(time.ticks_diff(self.peak_time, self.prev_peak_time))
-                  self.MARGIN = 0.975
+                  self.MARGIN = 0.97
                   return
             
             #Falling under threshold with detection flag on, reset.
@@ -133,8 +133,10 @@ class Measure(State):
 
 ##State machine states start here
 class ErrorState(State):
-      def __init__(self, message):
-            self.error = ['ERROR', message]
+      def __init__(self, message: list):
+            self.error = ['ERROR']
+            for line in message: #Compile error message
+                  self.error.append(line)
 
       def __enter__(self) -> object:
             screen.items(self.error, offset=0)
@@ -177,7 +179,7 @@ class UploadToLocal(State):
                   online.send_local(self.data)
                   self.state = MenuState()
             except:
-                  self.state = ErrorState('Local upload fail')
+                  self.state = ErrorState(['Local Upload', 'Fail'])
             return self.state
 
 #Special case where init is used to get the data to be drawn on entry
@@ -186,6 +188,7 @@ class ViewAnalysisState(State):
             self.data = data
 
       def __enter__(self) -> object:
+            historian.write(self.data)
             data = utility.format_data(self.data)
             screen.items(data, offset=0)
             screen.set_mode(3)
@@ -207,10 +210,9 @@ class HrvAnalysisState(Measure):
       def analysis(self) -> object:
             try:
                   data = analysis.full(self.PPI)
-                  historian.write(data)
                   self.state = ViewAnalysisState(data)
             except:
-                  self.state = ErrorState('Bad data')
+                  self.state = ErrorState(['Bad Data'])
             return self.state
 
       def run(self, input: int | None) -> object:
@@ -227,19 +229,18 @@ class HrvAnalysisState(Measure):
 class KubiosWaitMsgState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
-            self.timeout = 20000 #ms
+            self.timeout = 5000 #ms
             screen.items(['Waiting', 'for kubios'], offset=0)
             screen.set_mode(4)
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
             data = online.listen_kubios()
-            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  self.state = ErrorState('Kubios not reached')
-            elif data != None:
+            if data != None and data['data'] != 'Invalid request':
                   data = utility.parse_kubios_message(data)
-                  historian.write(data)
                   self.state = ViewAnalysisState(data)
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState(['Kubios not', 'reached'])
             return self.state
       
 
@@ -256,21 +257,21 @@ class KubiosState(Measure):
                   self.PPI = analysis.preprocess_ppi(self.PPI)
                   data = utility.format_kubios_message(self.PPI)
             except:
-                  self.state = ErrorState('Bad data')
+                  self.state = ErrorState(['Bad data'])
                   return self.state
             #Send data to kubios
             try:
                   online.send_kubios(data)
                   self.state = KubiosWaitMsgState()
             except:
-                  self.state = ErrorState('No connection')
+                  self.state = ErrorState(['No connection'])
             return self.state
 
       def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
             if not online.is_connected():
-                  self.state = ErrorState('No connection')
+                  self.state = ErrorState(['No connection'])
             elif input == ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
@@ -308,7 +309,7 @@ class HistoryState(State):
 
       def run(self, input: int | None) -> object:
             if not self.items:
-                  self.state = ErrorState('No History')
+                  self.state = ErrorState(['No History'])
             elif input == ROT_PUSH:
                   self.state = ReadHistoryState(self.items[self.select])
             elif input == ROTB:
@@ -354,10 +355,10 @@ class ConnectState(State):
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
-            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  self.state = ErrorState('Wi-Fi not found')
-            elif online.connect():
+            if online.connect():
                   self.state = MenuState()
+            elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ErrorState(['Wi-Fi not found'])
             return self.state
       
       def __exit__(self, exc_type, exc_value, traceback):

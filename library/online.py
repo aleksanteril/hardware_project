@@ -47,8 +47,11 @@ class Online:
             return False
         
         #Time server
-        ntptime.host = "fi.pool.ntp.org"
-        ntptime.settime()
+        try:
+            ntptime.host = "fi.pool.ntp.org"
+            ntptime.settime()
+        except:
+            print('Time server not reached, time not in sync')
         
         #MQTT Establish
         self.local_mqtt = self._connect_mqtt('local', 1883)
