@@ -232,16 +232,23 @@ class HrvAnalysisState(Measure):
 class KubiosWaitMsgState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
-            self.timeout = 5000 #ms
+            self.timeout = 10000 #ms
             screen.items(['Waiting', 'for kubios'], offset=0)
             screen.set_mode(4)
             return super().__enter__()
       
-      def run(self, input: int | None) -> object:
-            data = online.listen_kubios()
-            if data != None and data['data'] != 'Invalid request':
+      def parse(self, data) -> object:
+            try:
                   data = utility.parse_kubios_message(data)
                   self.state = ViewAnalysisState(data)
+            except: #If data is invalid or has a problem, error state
+                  self.state = ErrorState(['Kubios not', 'reached'])
+            return self.state
+
+      def run(self, input: int | None) -> object:
+            data = online.listen_kubios()
+            if data != None:
+                  self.state = self.parse(data)
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   self.state = ErrorState(['Kubios not', 'reached'])
             return self.state
