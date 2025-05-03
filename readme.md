@@ -2,7 +2,7 @@
 # PulseCheck - A HR analysis device
 
 ### Purpose
-This device was developed as part of the Metropolia UAS hardware 1 & 2 courses.
+This device was developed as part of the Metropolia UAS hardware 1 & 2 courses. Purpose was to learn basic development and ideas of embedded devices with MicroPython
 
 ---
 ### Good to know
