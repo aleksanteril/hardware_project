@@ -8,13 +8,13 @@
         ["lib/led.py", "http://localhost:8000/pico-lib/led.py"],
         ["lib/ssd1306.mpy", "http://localhost:8000/pico-lib/ssd1306.mpy"],
         ["lib/umqtt/simple.mpy", "http://localhost:8000/pico-lib/umqtt/simple.mpy"],
-        ["lib/analysis.py", "http://localhost:8000/library/analysis.py"],
-        ["lib/historian.py", "http://localhost:8000/library/historian.py"],
-        ["lib/utility.py", "http://localhost:8000/library/utility.py"],
-        ["lib/peripherals.py", "http://localhost:8000/library/peripherals.py"],
-        ["settings.txt", "http://localhost:8000/library/settings.txt"],
-        ["lib/online.py", "http://localhost:8000/library/online.py"],
-        ["lib/template_state.py", "http://localhost:8000/library/template_state.py"]
+        ["lib/analysis.py", "http://localhost:8000/lib/analysis.py"],
+        ["lib/historian.py", "http://localhost:8000/lib/historian.py"],
+        ["lib/utility.py", "http://localhost:8000/lib/utility.py"],
+        ["lib/peripherals.py", "http://localhost:8000/lib/peripherals.py"],
+        ["settings.txt", "http://localhost:8000/lib/settings.txt"],
+        ["lib/online.py", "http://localhost:8000/lib/online.py"],
+        ["lib/template_state.py", "http://localhost:8000/lib/template_state.py"]
       ],
       "deps": [
       ],

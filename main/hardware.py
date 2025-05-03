@@ -1,9 +1,9 @@
 from fifo import Fifo
-from peripherals import Button, Rotary, Screen, Isr_fifo
+from lib.peripherals import Button, Rotary, Screen, Isr_fifo
 from led import Led
-import utility
-from historian import History
-from online import Online
+from lib.utility import read_wifi_file
+from lib.historian import History
+from lib.online import Online
 '''This file contains the hardware object and the initizaliati'''
 
 class HardwareConfig:
@@ -39,7 +39,7 @@ class HardwareConfig:
             self.historian = History()
 
             #Create online communications object
-            settings = utility.read_wifi_file()
+            settings = read_wifi_file()
             self.online = Online(settings['SSID'], settings['PASSWORD'], settings['MQTTBROKER'], settings['TOPIC'], settings['PORT'])
 
             #Create hardware objects

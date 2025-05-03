@@ -1,5 +1,6 @@
-import time, analysis, utility, gc, _thread
-from template_state import State
+import time, gc, _thread
+from lib import analysis, utility
+from lib.template_state import State
 from hardware import HardwareConfig
 '''This file contains the state machine that is running on the PulseCheck'''
 
