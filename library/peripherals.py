@@ -193,6 +193,7 @@ class Button:
             self.fifo = fifo
             self.pin_nr = id
             self.tick1, self.tick2 = 0, ticks_ms()
+            self.enable_irq()
     
       #For polling holding down
       def hold(self):

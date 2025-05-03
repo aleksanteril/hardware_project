@@ -1,53 +1,20 @@
-from fifo import Fifo
-from peripherals import Button, Rotary, Screen, Isr_fifo
-from led import Led
 import time, analysis, utility, gc, _thread
-from historian import History
 from template_state import State
-from online import Online
+from hardware import HardwareConfig
 '''This file contains the state machine that is running on the PulseCheck'''
 
 '''Allocate memory for irq handler exceptions'''
 import micropython
 micropython.alloc_emergency_exception_buf(200)
 
-#Pin declarations
-ROTA = 10
-ROTB = 11
-ROT_PUSH = 12
-OLED_DA = 14
-OLED_CLK = 15
-LED1 = 22
-LED2 = 21
-LED3 = 20
-ADC = 26
-SW0 = 7
-
-#Create fifo for input events, signed short needed for rotary
-fifo = Fifo(50, 'h')
-
-#Create the historian for local saving
-historian = History()
-
-#Create online communications object
-settings = utility.read_wifi_file()
-online = Online(settings['SSID'], settings['PASSWORD'], settings['MQTTBROKER'], settings['TOPIC'], settings['PORT'])
-
-#Create hardware objects
-switch = Button(SW0, fifo)
-switch.enable_irq()
-button = Button(ROT_PUSH, fifo)
-button.enable_irq()
-rotary = Rotary(ROTA, ROTB, fifo)
-screen = Screen(OLED_DA, OLED_CLK)
-led1 = Led(LED1)
-adc = Isr_fifo(10, ADC)
+'''Init the hardware objects'''
+hardware = HardwareConfig()
 
 
 #Core1 is used for the slow screen function, to avoid fifo getting full on core0
 def core1_thread():
       while True:
-            screen.update()
+            hardware.screen.update()
             gc.collect()
 
 
@@ -66,12 +33,12 @@ class Measure(State):
             self.x, self.y = 0, 0
             self.got_data = False
             #Start sample reading
-            adc.init_timer(250)
+            hardware.adc.init_timer(250)
 
       def _read_sample_to_list(self) -> bool:
-            if adc.empty():
+            if hardware.adc.empty():
                   return False
-            self.samples.append(adc.get())
+            self.samples.append(hardware.adc.get())
             return True
 
       def measure(self, MAX_PPI_SIZE: int):
@@ -95,7 +62,7 @@ class Measure(State):
 
       def accept_ppi_to_list(self, ppi: int):
             if 250 < ppi < 2000:
-                  screen.ppi()
+                  hardware.screen.ppi()
                   self.PPI.append(ppi)
             return
 
@@ -123,15 +90,15 @@ class Measure(State):
                   return
             self.y = utility.plot_sample(self.samples[-1], self.max_list, self.scale_fc)
             self.y = min(max(0, self.y), 41)
-            screen.hr_plot_pos(self.x, self.y)
-            self.x = (self.x + 1) % screen.width
+            hardware.screen.hr_plot_pos(self.x, self.y)
+            self.x = (self.x + 1) % hardware.screen.width
             self.got_data = False
             return
       
       def __exit__(self, exc_type, exc_value, traceback):
-            screen.hr_plot_pos(-1, 16) #To fix wild pixel upon re-entering measuring
-            screen.hr_bpm(0)
-            adc.deinit_timer()
+            hardware.screen.hr_plot_pos(-1, 16) #To fix wild pixel upon re-entering measuring
+            hardware.screen.hr_bpm(0)
+            hardware.adc.deinit_timer()
             return
 
 
@@ -143,19 +110,19 @@ class ErrorState(State):
                   self.error.append(line)
 
       def __enter__(self) -> object:
-            screen.items(self.error, offset=0)
-            screen.set_mode(3)
+            hardware.screen.items(self.error, offset=0)
+            hardware.screen.set_mode(3)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
-            if input == ROT_PUSH:
+            if input == hardware.ROT_PUSH:
                   self.state = MenuState()
             return self.state
 
 
 class MeasureHrState(Measure):
       def __enter__(self) -> object:
-            screen.set_mode(0)
+            hardware.screen.set_mode(0)
             self.bpm = 0
             return super().__enter__()
 
@@ -163,13 +130,13 @@ class MeasureHrState(Measure):
             Measure.display_data(self)
             if self.PPI:
                   self.bpm = round(analysis.mean_hr(self.PPI))
-            screen.hr_bpm(self.bpm)
+            hardware.screen.hr_bpm(self.bpm)
             return
 
       def run(self, input: int | None) -> object:
             self.measure(10)
             self.display_data()
-            if input == ROT_PUSH:
+            if input == hardware.ROT_PUSH:
                   self.state = MenuState()
             return self.state
 
@@ -180,7 +147,7 @@ class UploadToLocal(State):
 
       def run(self, input: int | None) -> object:
             try:
-                  online.send_local(self.data)
+                  hardware.online.send_local(self.data)
                   self.state = MenuState()
             except:
                   self.state = ErrorState(['Local Upload', 'Fail'])
@@ -192,14 +159,14 @@ class ViewAnalysisState(State):
             self.data = data
 
       def __enter__(self) -> object:
-            historian.write(self.data)
+            hardware.historian.write(self.data)
             data = utility.format_data(self.data)
-            screen.items(data, offset=0)
-            screen.set_mode(3)
+            hardware.screen.items(data, offset=0)
+            hardware.screen.set_mode(3)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
-            if input == ROT_PUSH:
+            if input == hardware.ROT_PUSH:
                   self.state = UploadToLocal(self.data)
             return self.state
 
@@ -208,7 +175,7 @@ class HrvAnalysisState(Measure):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
-            screen.set_mode(2)
+            hardware.screen.set_mode(2)
             return super().__enter__()
       
       def analysis(self) -> object:
@@ -222,10 +189,10 @@ class HrvAnalysisState(Measure):
       def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
-            if input == ROT_PUSH:
+            if input == hardware.ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  adc.deinit_timer()
+                  hardware.adc.deinit_timer()
                   self.state = self.analysis()
             return self.state
 
@@ -234,8 +201,8 @@ class KubiosWaitMsgState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
             self.timeout = 10000 #ms
-            screen.items(['Waiting', 'for kubios'], offset=0)
-            screen.set_mode(4)
+            hardware.screen.items(['Waiting', 'for kubios'], offset=0)
+            hardware.screen.set_mode(4)
             return super().__enter__()
       
       def parse(self, data) -> object:
@@ -247,7 +214,7 @@ class KubiosWaitMsgState(State):
             return self.state
 
       def run(self, input: int | None) -> object:
-            data = online.listen_kubios()
+            data = hardware.online.listen_kubios()
             if data != None:
                   self.state = self.parse(data)
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
@@ -259,7 +226,7 @@ class KubiosState(Measure):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
             self.timeout = 30000 #ms
-            screen.set_mode(2)
+            hardware.screen.set_mode(2)
             return super().__enter__()
       
       def process_and_send(self) -> object:
@@ -272,7 +239,7 @@ class KubiosState(Measure):
                   return self.state
             #Send data to kubios
             try:
-                  online.send_kubios(data)
+                  hardware.online.send_kubios(data)
                   self.state = KubiosWaitMsgState()
             except:
                   self.state = ErrorState(['No connection'])
@@ -281,12 +248,12 @@ class KubiosState(Measure):
       def run(self, input: int | None) -> object:
             self.measure(30)
             self.display_data()
-            if not online.is_connected():
+            if not hardware.online.is_connected():
                   self.state = ErrorState(['No connection'])
-            elif input == ROT_PUSH:
+            elif input == hardware.ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
-                  adc.deinit_timer()
+                  hardware.adc.deinit_timer()
                   self.state = self.process_and_send()
             return self.state
 
@@ -296,14 +263,14 @@ class ReadHistoryState(State):
             self.file = filename
 
       def __enter__(self) -> object:
-            data = historian.read(self.file)
+            data = hardware.historian.read(self.file)
             self.data = utility.format_data(data)
-            screen.items(self.data, offset=0)
-            screen.set_mode(3)
+            hardware.screen.items(self.data, offset=0)
+            hardware.screen.set_mode(3)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
-            if input == ROT_PUSH:
+            if input == hardware.ROT_PUSH:
                   self.state = MenuState()
             return self.state
 
@@ -311,22 +278,22 @@ class ReadHistoryState(State):
 class HistoryState(State):
       def __enter__(self) -> object:
             self.select = 0
-            self.items = historian.contents()
+            self.items = hardware.historian.contents()
             self.items.reverse()
-            screen.items(utility.format_filenames(self.items))
-            screen.cursor_pos(self.select)
-            screen.set_mode(1)
+            hardware.screen.items(utility.format_filenames(self.items))
+            hardware.screen.cursor_pos(self.select)
+            hardware.screen.set_mode(1)
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
             if not self.items:
                   self.state = ErrorState(['No History'])
-            elif input == ROT_PUSH:
+            elif input == hardware.ROT_PUSH:
                   self.state = ReadHistoryState(self.items[self.select])
-            elif input == ROTB:
-                  self.select += fifo.get()
+            elif input == hardware.ROTB:
+                  self.select += hardware.fifo.get()
                   self.select = min(max(0, self.select), len(self.items)-1)
-                  screen.cursor_pos(self.select)
+                  hardware.screen.cursor_pos(self.select)
             return self.state
 
 
@@ -335,24 +302,24 @@ class MenuState(State):
             self.select = 0
             self.items = ['MEASURE HR', 'HRV ANALYSIS', 'KUBIOS', 'HISTORY']
             self.states = [MeasureHrState, HrvAnalysisState, KubiosState, HistoryState]
-            screen.items(self.items)
-            screen.cursor_pos(self.select)
-            screen.set_mode(1)
-            if online.is_connected():
-                  led1.on()
+            hardware.screen.items(self.items)
+            hardware.screen.cursor_pos(self.select)
+            hardware.screen.set_mode(1)
+            if hardware.online.is_connected():
+                  hardware.led1.on()
             else:
-                  led1.off()
+                  hardware.led1.off()
             return State.__enter__(self)
 
       def run(self, input: int | None) -> object:
-            if input == SW0 and not online.is_connected():
+            if input == hardware.SW0 and not hardware.online.is_connected():
                   self.state = ConnectState()
-            elif input == ROT_PUSH:
+            elif input == hardware.ROT_PUSH:
                   self.state = self.states[self.select]()
-            elif input == ROTB:
-                  self.select += fifo.get()
+            elif input == hardware.ROTB:
+                  self.select += hardware.fifo.get()
                   self.select = min(max(0, self.select), len(self.items)-1)
-                  screen.cursor_pos(self.select)
+                  hardware.screen.cursor_pos(self.select)
             return self.state
 
 
@@ -360,26 +327,26 @@ class ConnectState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
             self.timeout = 15000 #ms
-            rotary.disable() #Rotary must be disabled because online contains a sleep for 20ms, to prevent user fking up
-            screen.items(['Connecting', 'to cosmos'], offset=0)
-            screen.set_mode(4)
+            hardware.rotary.disable() #Rotary must be disabled because online contains a sleep for 20ms, to prevent user fking up
+            hardware.screen.items(['Connecting', 'to cosmos'], offset=0)
+            hardware.screen.set_mode(4)
             return super().__enter__()
       
       def run(self, input: int | None) -> object:
-            if online.connect():
+            if hardware.online.connect():
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
                   self.state = ErrorState(['Wi-Fi not found'])
             return self.state
       
       def __exit__(self, exc_type, exc_value, traceback):
-            rotary.enable() #Enable rotary upon exit
+            hardware.rotary.enable() #Enable rotary upon exit
             return
 
 
 #The runner
 class PulseCheck:
-      def __init__(self, fifo=fifo, initial_state=ConnectState()):
+      def __init__(self, fifo=hardware.fifo, initial_state=ConnectState()):
             self.next_state = initial_state
             self.fifo = fifo
 
