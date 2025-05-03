@@ -26,10 +26,12 @@ class Online:
             cls._instance = super().new(cls)
         return cls._instance
     
-    def __init__(self, SSID: str, PWD: str, IP: str):
+    def __init__(self, SSID: str, PWD: str, IP: str, TOPIC: str, PORT: str):
         self.SSID = SSID
         self.PWD = PWD
         self.IP = IP
+        self.TOPIC = TOPIC
+        self.PORT = PORT
         self.connected = False
         self.received = False
         self.local_mqtt = None
@@ -43,7 +45,7 @@ class Online:
     
     def connect(self) -> bool:
         if not self.wlan.isconnected():
-            sleep_ms(75) #Must sleep to await response
+            sleep_ms(50) #Must sleep to await response
             return False
         
         #Time server
@@ -53,6 +55,14 @@ class Online:
         except:
             print('Time server not reached, time not in sync')
         
+        #Disconnect in case of re-connect press when connection was lost mid machine running
+        try:
+            self.local_mqtt.disconnect()
+            self.kubios_mqtt.disconnect()
+        except:
+            print('No previous MQTT connections to disconnect')
+
+
         #MQTT Establish
         self.local_mqtt = self._connect_mqtt('local', 1883)
         self.kubios_mqtt = self._connect_mqtt('kubios', 21883)

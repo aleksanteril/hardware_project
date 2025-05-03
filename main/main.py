@@ -30,7 +30,8 @@ fifo = Fifo(50, 'h')
 historian = History()
 
 #Create online communications object
-online = Online("KMD657_Group_1", "ykasonni123", "192.168.1.253")
+settings = utility.read_wifi_file()
+online = Online(settings['SSID'], settings['PASSWORD'], settings['MQTTBROKER'], settings['TOPIC'], settings['PORT'])
 
 #Create hardware objects
 switch = Button(SW0, fifo)
