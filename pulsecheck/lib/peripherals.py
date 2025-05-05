@@ -28,7 +28,7 @@ class Screen(SSD1306_I2C):
             super().__init__(self.width, self.heigth, i2c)
             
       def _draw_hr(self): # -2 and -1 offset to fix refresh bar issue
-            self.fill_rect(self.x-1, 0, 12, 42, 0)
+            self.fill_rect(self.x-1, 0, 12, 48, 0)
             self.line(self.x-2, self.y_old, self.x-1, self.y, 1)
             self.y_old = self.y
             return
