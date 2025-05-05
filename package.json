@@ -1,5 +1,6 @@
 {
       "urls": [
+        ["main.py", "http://localhost:8000/pulsecheck/main.py"],
         ["hardware.py", "http://localhost:8000/pulsecheck/hardware.py"],
         ["settings.txt", "http://localhost:8000/pulsecheck/settings.txt"],
         ["lib/filefifo.py", "http://localhost:8000/pico-lib/filefifo.py"],	
