@@ -23,25 +23,25 @@ class Measure(State):
             if self.hardware.adc.empty():
                   return False
             self.samples.append(self.hardware.adc.get())
+            self.sample_num += 1
+            self.got_data = True
             return True
 
       def measure(self, MAX_PPI_SIZE: int):
             if not self._read_sample_to_list():
                   return
-            self.sample_num += 1
-            if len(self.samples) < 500:
-                  self.got_data = True
+            
+            if self.sample_num % 250 == 0:
+                  self.max_list, self.scale_fc = utility.calculate_plotting_values(self.samples[:250])
+            
+            if len(self.samples) < 750:
                   return
 
             self._find_ppi()
-
             del self.samples[0]
+
             if len(self.PPI) > MAX_PPI_SIZE:
                   del self.PPI[0]
-
-            if self.sample_num % 250 == 0:
-                  self.max_list, self.scale_fc = utility.calculate_plotting_values(self.samples[:250])
-            self.got_data = True
             return
 
       def accept_ppi_to_list(self, ppi: int):
