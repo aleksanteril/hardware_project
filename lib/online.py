@@ -31,11 +31,11 @@ class Online:
         self.PWD = PWD
         self.IP = IP
         self.TOPIC = TOPIC
-        self.PORT = PORT
+        self.PORT = int(PORT)
         self.connected = False
         self.received = False
         self.local_mqtt = None
-        self.kubios_mqtt = None
+        self.docker_mqtt = None
         self.kubios_msg = None # Storing the last message here
         
         self.wlan = network.WLAN(network.STA_IF)
@@ -58,17 +58,17 @@ class Online:
         #Disconnect in case of re-connect press when connection was lost mid machine running
         try:
             self.local_mqtt.disconnect()
-            self.kubios_mqtt.disconnect()
+            self.docker_mqtt.disconnect()
         except:
             print('MQTT connections already disconnected')
 
 
         #MQTT Establish
-        self.local_mqtt = self._connect_mqtt('local', 1883)
-        self.kubios_mqtt = self._connect_mqtt('kubios', 21883)
-        if self.kubios_mqtt: # If connected subscribe to correct topic early
-            self.kubios_mqtt.set_callback(self._kubios_callback) # Calling the class method for callback
-            self.kubios_mqtt.subscribe('kubios-response')
+        self.local_mqtt = self._connect_mqtt('local', self.PORT)
+        self.docker_mqtt = self._connect_mqtt('kubios', 21883)
+        if self.docker_mqtt: # If connected subscribe to correct topic early
+            self.docker_mqtt.set_callback(self._kubios_callback) # Calling the class method for callback
+            self.docker_mqtt.subscribe('kubios-response')
             
         self.connected = True
         return True
@@ -101,7 +101,7 @@ class Online:
     # Method for listening and awaiting a response from kubios
     def listen_kubios(self) -> dict | None:
         try: #To avoid crash if MQTT broker was down and came up again!
-            self.kubios_mqtt.check_msg()
+            self.docker_mqtt.check_msg()
         except:
             self.connected = False
             return None
@@ -122,12 +122,12 @@ class Online:
     # Send HRV data to kubios and receive the data message returned by kubios
     def send_kubios(self, data: dict) -> dict:
         data = ujson.dumps(data)
-        self.send_mqtt_message(self.kubios_mqtt, 'kubios-request', data)
+        self.send_mqtt_message(self.docker_mqtt, 'kubios-request', data)
         return
     
     # Send data locally to hr-data topic
     def send_local(self, data: dict):
         data = ujson.dumps(data)
-        self.send_mqtt_message(self.local_mqtt, 'hr-data', data)
-        self.send_mqtt_message(self.kubios_mqtt, 'hr-data', data)
+        self.send_mqtt_message(self.local_mqtt, self.TOPIC, data)
+        self.send_mqtt_message(self.docker_mqtt, 'hr-data', data)
         return
