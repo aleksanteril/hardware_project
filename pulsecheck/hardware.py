@@ -1,6 +1,6 @@
-from fifo import Fifo
+from fifo import Fifo # type: ignore
 from lib.peripherals import Button, Rotary, Screen, Isr_fifo
-from led import Led
+from led import Led # type: ignore
 from lib.utility import read_wifi_file
 from lib.historian import History
 from lib.online import Online

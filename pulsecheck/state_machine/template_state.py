@@ -1,13 +1,13 @@
+from hardware import HardwareConfig
 '''This file contains template state of the state machine'''
-
-ROTB = 11
-ROT_PUSH = 12
 
 #Template state class
 class State:
+      
+      #Used for the states to get pin num refrences, object refrences etc.
+      hardware = HardwareConfig()
+
       def __enter__(self) -> object:
-            global ROTB
-            global ROT_PUSH
             self.state = self
             return self
 
