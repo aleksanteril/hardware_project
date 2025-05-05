@@ -60,7 +60,7 @@ class Online:
             self.local_mqtt.disconnect()
             self.kubios_mqtt.disconnect()
         except:
-            print('No previous MQTT connections to disconnect')
+            print('MQTT connections already disconnected')
 
 
         #MQTT Establish
@@ -96,12 +96,15 @@ class Online:
     
     #*TODO* This method needs to ping and confirm that connection is ok *TODO*
     def is_connected(self) -> bool:
-        self.connected = self.wlan.isconnected()
         return self.connected
 
     # Method for listening and awaiting a response from kubios
     def listen_kubios(self) -> dict | None:
-        self.kubios_mqtt.check_msg()
+        try: #To avoid crash if MQTT broker was down and came up again!
+            self.kubios_mqtt.check_msg()
+        except:
+            self.connected = False
+            return None
         if not self.received:
             return None
         self.received = False

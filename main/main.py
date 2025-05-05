@@ -188,7 +188,7 @@ class HrvAnalysisState(Measure):
             return self.state
 
       def run(self, input: int | None) -> object:
-            self.measure(30)
+            self.measure(50)
             self.display_data()
             if input == hardware.ROT_PUSH:
                   self.state = MenuState()
@@ -211,7 +211,7 @@ class KubiosWaitMsgState(State):
                   data = utility.parse_kubios_message(data)
                   self.state = ViewAnalysisState(data)
             except: #If data is invalid or has a problem, error state
-                  self.state = ErrorState(['Kubios not', 'reached'])
+                  self.state = ErrorState(['Data could', 'not be parsed'])
             return self.state
 
       def run(self, input: int | None) -> object:
@@ -247,7 +247,7 @@ class KubiosState(Measure):
             return self.state
 
       def run(self, input: int | None) -> object:
-            self.measure(30)
+            self.measure(50)
             self.display_data()
             if not hardware.online.is_connected():
                   self.state = ErrorState(['No connection'])
