@@ -28,7 +28,7 @@ class Screen(SSD1306_I2C):
             super().__init__(self.width, self.heigth, i2c)
             
       def _draw_hr(self): # -2 and -1 offset to fix refresh bar issue
-            self.fill_rect(self.x-1, 0, 12, 42, 0)
+            self.fill_rect(self.x-1, 0, 12, 48, 0)
             self.line(self.x-2, self.y_old, self.x-1, self.y, 1)
             self.y_old = self.y
             return
@@ -51,7 +51,7 @@ class Screen(SSD1306_I2C):
       def _draw_measure(self):
             self._draw_hr()
             if self.ppi_flag: #For drawing X when a peak detected
-                  self.text('X', self.x-6, 12, 1)
+                  self.text('X', self.x-8, self.y, 1)
                   self.ppi_flag = False
             return
 
@@ -193,6 +193,7 @@ class Button:
             self.fifo = fifo
             self.pin_nr = id
             self.tick1, self.tick2 = 0, ticks_ms()
+            self.enable_irq()
     
       #For polling holding down
       def hold(self):

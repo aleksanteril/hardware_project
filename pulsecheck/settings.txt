@@ -2,4 +2,4 @@ SSID=KMD657_Group_1
 PASSWORD=ykasonni123
 MQTTBROKER=192.168.1.253
 PORT=1883
-TOPIC=pulsecheck/hrv
+TOPIC=hr-data

@@ -1,19 +1,22 @@
 {
       "urls": [
-        ["main.py", "http://localhost:8000/main/main.py"],
+        ["main.py", "http://localhost:8000/pulsecheck/main.py"],
+        ["hardware.py", "http://localhost:8000/pulsecheck/hardware.py"],
+        ["settings.txt", "http://localhost:8000/pulsecheck/settings.txt"],
         ["lib/filefifo.py", "http://localhost:8000/pico-lib/filefifo.py"],	
         ["lib/fifo.py", "http://localhost:8000/pico-lib/fifo.py"],
         ["lib/piotimer.py", "http://localhost:8000/pico-lib/piotimer.py"],
         ["lib/led.py", "http://localhost:8000/pico-lib/led.py"],
         ["lib/ssd1306.mpy", "http://localhost:8000/pico-lib/ssd1306.mpy"],
         ["lib/umqtt/simple.mpy", "http://localhost:8000/pico-lib/umqtt/simple.mpy"],
-        ["lib/analysis.py", "http://localhost:8000/library/analysis.py"],
-        ["lib/historian.py", "http://localhost:8000/library/historian.py"],
-        ["lib/utility.py", "http://localhost:8000/library/utility.py"],
-        ["lib/peripherals.py", "http://localhost:8000/library/peripherals.py"],
-        ["settings.txt", "http://localhost:8000/library/settings.txt"],
-        ["lib/online.py", "http://localhost:8000/library/online.py"],
-        ["lib/template_state.py", "http://localhost:8000/library/template_state.py"]
+        ["lib/analysis.py", "http://localhost:8000/pulsecheck/lib/analysis.py"],
+        ["lib/historian.py", "http://localhost:8000/pulsecheck/lib/historian.py"],
+        ["lib/utility.py", "http://localhost:8000/pulsecheck/lib/utility.py"],
+        ["lib/peripherals.py", "http://localhost:8000/pulsecheck/lib/peripherals.py"],
+        ["lib/online.py", "http://localhost:8000/pulsecheck/lib/online.py"],
+        ["state_machine/template_state.py", "http://localhost:8000/pulsecheck/state_machine/template_state.py"],
+        ["state_machine/measure.py", "http://localhost:8000/pulsecheck/state_machine/measure.py"],
+        ["state_machine/states.py", "http://localhost:8000/pulsecheck/state_machine/states.py"]
       ],
       "deps": [
       ],

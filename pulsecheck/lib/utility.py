@@ -65,7 +65,6 @@ def read_wifi_file() -> dict:
       parameters = {}
       with open('/settings.txt', 'r') as file:
             for line in file:
-                  match = re.search('(\w+)=(\w+)', line)
+                  match = re.search('(\w+)=(.+)\r\n', line)
                   parameters[match.groups()[0]] = match.groups()[1]
       return parameters
-             
