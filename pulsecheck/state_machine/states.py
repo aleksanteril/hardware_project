@@ -192,8 +192,8 @@ class HistoryState(State):
                   self.state = ErrorState(['No History'])
             elif input == self.hardware.ROT_PUSH:
                   self.state = ReadHistoryState(self.items[self.select])
-            elif input == self.hardware.ROTB:
-                  self.select += self.hardware.fifo.get()
+            elif input == 1 or input == -1: #Rotary
+                  self.select += input
                   self.select = min(max(0, self.select), len(self.items)-1)
                   self.hardware.screen.cursor_pos(self.select)
             return self.state
@@ -218,8 +218,8 @@ class MenuState(State):
                   self.state = ConnectState()
             elif input == self.hardware.ROT_PUSH:
                   self.state = self.states[self.select]()
-            elif input == self.hardware.ROTB:
-                  self.select += self.hardware.fifo.get()
+            elif input == 1 or input == -1: #Rotary
+                  self.select += input
                   self.select = min(max(0, self.select), len(self.items)-1)
                   self.hardware.screen.cursor_pos(self.select)
             return self.state
