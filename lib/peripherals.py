@@ -51,7 +51,7 @@ class Screen(SSD1306_I2C):
       def _draw_measure(self):
             self._draw_hr()
             if self.ppi_flag: #For drawing X when a peak detected
-                  self.text('X', self.x-6, 12, 1)
+                  self.text('X', self.x-8, self.y, 1)
                   self.ppi_flag = False
             return
 
