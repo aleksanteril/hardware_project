@@ -178,7 +178,6 @@ class Rotary:
 
       #Accessed with interrupt request only! 
       def _handler(self, pin):
-            self.fifo.put(self.pin_nr) #To mark the next signal (pin_nr),(turn)
             if self.signal():
                   self.fifo.put(1)
             else:
