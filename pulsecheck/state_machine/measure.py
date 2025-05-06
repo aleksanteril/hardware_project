@@ -56,7 +56,7 @@ class Measure(State):
       def _find_ppi(self):
 
             #             O(n) op               O(1) op
-            threshold = (sum(self.samples) / len(self.samples))*1.03#self.MARGIN
+            threshold = (sum(self.samples) / len(self.samples))*1.05#self.MARGIN
 
             #Rolling average of 5 last
             data = self.samples[-3:]
