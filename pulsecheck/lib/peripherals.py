@@ -91,7 +91,8 @@ class Screen(SSD1306_I2C):
                   elif self.items_request:
                         self._draw_items()
                         self.items_request = False
-                  #Screen modes, 0 = active measuring, 1 = menu mode, 2 = analysis measuring, 3 = static view, 4 = loading anim
+                  #Screen modes, 0 = active measuring, 1 = menu mode,
+                  #2 = analysis measuring, 3 = static view, 4 = loading anim, 5 = startup
                   elif self.mode == 0:
                         self._draw_measure()
                         self._draw_bpm()
@@ -153,10 +154,11 @@ class Screen(SSD1306_I2C):
             return
       
       
-      #Screen modes, 0 = measuring, 1 = menu mode, 2 = analysis view, 3 = static view, 4 = loading anim
+      #Screen modes, 0 = measuring, 1 = menu mode,
+      #2 = analysis view, 3 = static view, 4 = loading anim, 5 = startup
       def set_mode(self, mode: int):
             if mode < 0 or mode > 5:
-                  raise ValueError('Screen mode not correct, 0 = Measuring, 1 = Menu, 2 = Analysis view, 3 = Static view, 4 = Loading anim')
+                  raise ValueError('Screen mode not correct, 0 = Measuring, 1 = Menu, 2 = Analysis view, 3 = Static view, 4 = Loading anim, 5 = Startup')
             self.empty()
             with lock:
                   self.mode = mode

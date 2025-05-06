@@ -1,5 +1,4 @@
 import gc, _thread
-from state_machine.states import ConnectState
 from state_machine.states import LogoState
 from hardware import HardwareConfig
 '''This file contains the state machine that is running on the PulseCheck'''
