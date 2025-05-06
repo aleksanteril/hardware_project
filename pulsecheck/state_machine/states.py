@@ -26,17 +26,21 @@ class MeasureHrState(Measure):
       def __enter__(self) -> object:
             self.hardware.screen.set_mode(0)
             self.bpm = 0
+            self.filtered_ppi = []
             return super().__enter__()
 
       def display_data(self):
             Measure.display_data(self)
-            if self.PPI:
-                  self.bpm = round(analysis.mean_hr(self.PPI))
-            self.hardware.screen.hr_bpm(self.bpm)
+            if not self.PPI or not self.got_data:
+                  return
+            self.filtered_ppi = analysis.preprocess_ppi(self.PPI)
+            if self.filtered_ppi:
+                  self.bpm = round(analysis.mean_hr(self.filtered_ppi))
+                  self.hardware.screen.hr_bpm(self.bpm)
             return
 
       def run(self, input: int | None) -> object:
-            self.measure(10)
+            self.measure(20)
             self.display_data()
             if input == self.hardware.ROT_PUSH:
                   self.state = MenuState()

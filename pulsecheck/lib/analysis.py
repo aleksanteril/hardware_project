@@ -40,7 +40,7 @@ def preprocess_ppi(ppi: list) -> list:
       average = mean_ppi(ppi)
       low = average*0.8
       up = average*1.2
-      ppi[:] = [i for i in ppi if low < i < up]
+      ppi = [i for i in ppi if low < i < up]
       return ppi
 
 def full(ppi: list) -> dict:
