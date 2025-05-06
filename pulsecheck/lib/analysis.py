@@ -36,10 +36,10 @@ def sdnn(ppi: list) -> float:
       sdnn = sqrt(sum / (len(ppi)-1))
       return sdnn
 
-def preprocess_ppi(ppi: list) -> list:
+def preprocess_ppi(ppi: list, percent: float = 0.2) -> list:
       average = mean_ppi(ppi)
-      low = average*0.8
-      up = average*1.2
+      low = average*(1-percent)
+      up = average*(1+percent)
       ppi = [i for i in ppi if low < i < up]
       return ppi
 
