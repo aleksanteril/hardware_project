@@ -16,6 +16,8 @@ class Measure(State):
             self.samples, self.PPI = [], []
             self.x, self.y = 0, 0
             self.got_data = False
+            #To calculate the bpm flag
+            self.peak_appended = False
             #Start sample reading
             self.hardware.adc.init_timer(250)
 
@@ -48,6 +50,7 @@ class Measure(State):
             if 250 < ppi < 2000:
                   self.hardware.screen.ppi()
                   self.PPI.append(ppi)
+                  self.peak_appended = True
             return
 
       def _find_ppi(self):

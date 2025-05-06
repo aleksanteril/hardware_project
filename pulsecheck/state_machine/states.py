@@ -31,8 +31,9 @@ class MeasureHrState(Measure):
 
       def display_data(self):
             Measure.display_data(self)
-            if not self.PPI or not self.got_data:
+            if not self.peak_appended:
                   return
+            self.peak_appended = False
             self.filtered_ppi = analysis.preprocess_ppi(self.PPI)
             if self.filtered_ppi:
                   self.bpm = round(analysis.mean_hr(self.filtered_ppi))
