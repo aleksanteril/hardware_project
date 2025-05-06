@@ -35,8 +35,6 @@ class MeasureHrState(Measure):
                   return
             self.peak_appended = False
             self.filtered_ppi = analysis.preprocess_ppi(self.PPI, percent=0.3)
-            print(self.PPI)
-            print(self.filtered_ppi)
             if self.filtered_ppi:
                   self.bpm = round(analysis.mean_hr(self.filtered_ppi))
                   self.hardware.screen.hr_bpm(self.bpm)

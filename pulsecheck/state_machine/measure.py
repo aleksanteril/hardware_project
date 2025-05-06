@@ -36,7 +36,7 @@ class Measure(State):
             if self.sample_num % 250 == 0:
                   self.max_list, self.scale_fc = utility.calculate_plotting_values(self.samples[:250])
             
-            if len(self.samples) < 625:
+            if len(self.samples) < 500:
                   return
 
             self._find_ppi()
@@ -54,23 +54,26 @@ class Measure(State):
             return
 
       def _find_ppi(self):
+
             #             O(n) op               O(1) op
-            threshold = (sum(self.samples) / len(self.samples))*self.MARGIN
-            sample = self.samples[-1] #O(1) op
+            threshold = (sum(self.samples) / len(self.samples))*1.03#self.MARGIN
+            #Rolling average of 5 last
+            data = self.samples[-5:]
+            sample = sum(data)/len(data)
 
             #Rising edge detected, appends to PPI list if the value is acceptable
-            if sample > threshold and not self.edge:
+            if sample > threshold and self.samples[-3] - sample <= 0 and not self.edge:
                   self.peak_time = time.ticks_ms()
                   self.edge = True
                   self.accept_ppi_to_list(time.ticks_diff(self.peak_time, self.prev_peak_time))
-                  self.MARGIN = 0.98
+                  #self.MARGIN = 0.97
                   return
             
             #Falling under threshold with detection flag on, reset.
             elif sample < threshold and self.edge:
                   self.prev_peak_time = self.peak_time
                   self.edge = False
-                  self.MARGIN = 1.05
+                  #self.MARGIN = 1.05
             return
       
       def display_data(self):
