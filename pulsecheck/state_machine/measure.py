@@ -34,7 +34,7 @@ class Measure(State):
             if self.sample_num % 250 == 0:
                   self.max_list, self.scale_fc = utility.calculate_plotting_values(self.samples[:250])
             
-            if len(self.samples) < 625:
+            if len(self.samples) < 500:
                   return
 
             self._find_ppi()
