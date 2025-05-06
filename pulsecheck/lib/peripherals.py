@@ -2,9 +2,11 @@
 from fifo import Fifo
 from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
-from time import ticks_diff, ticks_ms, sleep_ms
+from time import ticks_diff, ticks_ms, sleep_ms, sleep
 from piotimer import Piotimer
 import _thread
+from animation import bitmaps
+import framebuf
 
 '''Lock for multithreading'''
 lock = _thread.allocate_lock()
@@ -16,6 +18,7 @@ class Screen(SSD1306_I2C):
             self.width = 128
             self.heigth = 64
             self.empty()
+            self.sleep = sleep
             self.mode = None
             self.hr_plot_pos(-1, 16)
             self.hr_bpm(0)
@@ -25,6 +28,12 @@ class Screen(SSD1306_I2C):
             self.cursor_pos(0)
             self.dots_str = ''
             self.y_old = 0
+            self.bm1 = framebuf.FrameBuffer(bitmaps.frame1, 128, 64, framebuf.MONO_VLSB) #Initializing the bitmap files
+            self.bm2 = framebuf.FrameBuffer(bitmaps.frame2, 128, 64, framebuf.MONO_VLSB)
+            self.bm3 = framebuf.FrameBuffer(bitmaps.frame3, 128, 64, framebuf.MONO_VLSB)
+            self.bm4 = framebuf.FrameBuffer(bitmaps.frame4, 128, 64, framebuf.MONO_VLSB)
+            self.bm5 = framebuf.FrameBuffer(bitmaps.frame5, 128, 64, framebuf.MONO_VLSB)
+
             super().__init__(self.width, self.heigth, i2c)
             
       def _draw_hr(self): # -2 and -1 offset to fix refresh bar issue
@@ -61,6 +70,17 @@ class Screen(SSD1306_I2C):
                   self.fill_rect(0, 46, 128, 18, 0)
                   self.dots_str = ''
             return
+        
+        
+      # When device turned on animation will play, then moves to connect state
+      def _draw_start_animation(self):
+           self.sequence = [(self.bm1, 0, 0, 0.4), (self.bm2, 0, 0, 0.4), (self.bm3, 0, 0, 0.4), (self.bm4, 0, 0, 0.4), (self.bm5, 0, 0, 1.6)]
+           for frame, x, y, delay in self.sequence:
+                  self.fill(0)
+                  self.blit(frame, x, y)
+                  self.show()
+                  self.sleep(delay)
+
 
       '''This is a method for core1 to loop and draw correct things requested by core0 through flags'''
       def update(self):
@@ -86,6 +106,10 @@ class Screen(SSD1306_I2C):
                   elif self.mode == 4:
                         self._draw_dot_animation()
                         self.text(f'{self.dots_str}', 0, 56, 1)
+                  elif self.mode == 5:
+                        self._draw_start_animation()
+                        
+
             #Buggy shit, use this to keep from crashing still :(
             try:
                   self.show()
@@ -131,7 +155,7 @@ class Screen(SSD1306_I2C):
       
       #Screen modes, 0 = measuring, 1 = menu mode, 2 = analysis view, 3 = static view, 4 = loading anim
       def set_mode(self, mode: int):
-            if mode < 0 or mode > 4:
+            if mode < 0 or mode > 5:
                   raise ValueError('Screen mode not correct, 0 = Measuring, 1 = Menu, 2 = Analysis view, 3 = Static view, 4 = Loading anim')
             self.empty()
             with lock:
