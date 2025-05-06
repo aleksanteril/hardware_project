@@ -57,12 +57,16 @@ class Measure(State):
 
             #             O(n) op               O(1) op
             threshold = (sum(self.samples) / len(self.samples))*1.03#self.MARGIN
+
             #Rolling average of 5 last
-            data = self.samples[-5:]
+            data = self.samples[-3:]
             sample = sum(data)/len(data)
 
+            data2 = self.samples[-6:-3]
+            sample2 = sum(data2)/len(data2)
+
             #Rising edge detected, appends to PPI list if the value is acceptable
-            if sample > threshold and self.samples[-3] - sample <= 0 and not self.edge:
+            if sample > threshold and sample2 - sample <= 0 and not self.edge:
                   self.peak_time = time.ticks_ms()
                   self.edge = True
                   self.accept_ppi_to_list(time.ticks_diff(self.peak_time, self.prev_peak_time))
