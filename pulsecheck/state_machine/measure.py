@@ -56,13 +56,13 @@ class Measure(State):
       def _find_ppi(self):
 
             #             O(n) op               O(1) op
-            threshold = (sum(self.samples) / len(self.samples))*1.05#self.MARGIN
+            threshold = (sum(self.samples) / len(self.samples))*1.04#self.MARGIN
 
             #Rolling average of 5 last
-            data = self.samples[-3:]
+            data = self.samples[-5:]
             sample = sum(data)/len(data)
 
-            data2 = self.samples[-6:-3]
+            data2 = self.samples[-10:-5]
             sample2 = sum(data2)/len(data2)
 
             #Rising edge detected, appends to PPI list if the value is acceptable
