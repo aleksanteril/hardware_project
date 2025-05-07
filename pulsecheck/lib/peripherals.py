@@ -4,9 +4,8 @@ from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
 from time import ticks_diff, ticks_ms, sleep_ms, sleep
 from piotimer import Piotimer
-import _thread
+import _thread, framebuf
 from animation import bitmaps
-import framebuf
 
 '''Lock for multithreading'''
 lock = _thread.allocate_lock()
@@ -28,12 +27,6 @@ class Screen(SSD1306_I2C):
             self.cursor_pos(0)
             self.dots_str = ''
             self.y_old = 0
-            self.bm1 = framebuf.FrameBuffer(bitmaps.frame1, 128, 64, framebuf.MONO_VLSB) #Initializing the bitmap files
-            self.bm2 = framebuf.FrameBuffer(bitmaps.frame2, 128, 64, framebuf.MONO_VLSB)
-            self.bm3 = framebuf.FrameBuffer(bitmaps.frame3, 128, 64, framebuf.MONO_VLSB)
-            self.bm4 = framebuf.FrameBuffer(bitmaps.frame4, 128, 64, framebuf.MONO_VLSB)
-            self.bm5 = framebuf.FrameBuffer(bitmaps.frame5, 128, 64, framebuf.MONO_VLSB)
-
             super().__init__(self.width, self.heigth, i2c)
             
       def _draw_hr(self): # -2 and -1 offset to fix refresh bar issue
@@ -74,8 +67,13 @@ class Screen(SSD1306_I2C):
         
       # When device turned on animation will play, then moves to connect state
       def _draw_start_animation(self):
-           self.sequence = [(self.bm1, 0, 0, 0.4), (self.bm2, 0, 0, 0.4), (self.bm3, 0, 0, 0.4), (self.bm4, 0, 0, 0.4), (self.bm5, 0, 0, 1.6)]
-           for frame, x, y, delay in self.sequence:
+            self.bm1 = framebuf.FrameBuffer(bitmaps.frame1, 128, 64, framebuf.MONO_VLSB) #Initializing the bitmap files
+            self.bm2 = framebuf.FrameBuffer(bitmaps.frame2, 128, 64, framebuf.MONO_VLSB)
+            self.bm3 = framebuf.FrameBuffer(bitmaps.frame3, 128, 64, framebuf.MONO_VLSB)
+            self.bm4 = framebuf.FrameBuffer(bitmaps.frame4, 128, 64, framebuf.MONO_VLSB)
+            self.bm5 = framebuf.FrameBuffer(bitmaps.frame5, 128, 64, framebuf.MONO_VLSB)
+            self.sequence = [(self.bm1, 0, 0, 0.2), (self.bm2, 0, 0, 0.2), (self.bm3, 0, 0, 0.2), (self.bm4, 0, 0, 0.2), (self.bm5, 0, 0, 1.5)]
+            for frame, x, y, delay in self.sequence:
                   self.fill(0)
                   self.blit(frame, x, y)
                   self.show()
