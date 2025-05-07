@@ -8,7 +8,7 @@ from lib import utility, analysis # type: ignore
 class LogoState(State):
       def __enter__(self) -> object:
             self.start_time = time.ticks_ms()
-            self.timeout = 2400 #ms this value can be changed to adjust the time logo will show 
+            self.timeout = 4000 #ms this value can be changed to adjust the time logo will show 
             self.hardware.screen.set_mode(5)
             return super().__enter__()
       

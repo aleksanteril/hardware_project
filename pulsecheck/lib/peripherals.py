@@ -79,7 +79,7 @@ class Screen(SSD1306_I2C):
             return
         
       def _draw_start_animation(self):
-            if ticks_diff(ticks_ms(), self.last_draw) < 200:
+            if ticks_diff(ticks_ms(), self.last_draw) < 150:
                   return
             #Get the new frame from anim frames list
             self.frame = framebuf.FrameBuffer(logo.frames[self.anim_index], self.width, self.heigth, framebuf.MONO_VLSB)
