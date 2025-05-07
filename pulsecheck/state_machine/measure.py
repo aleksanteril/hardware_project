@@ -9,7 +9,7 @@ class Measure(State):
             self.edge = False
             self.peak_time = time.ticks_ms()
             self.prev_peak_time = time.ticks_ms()
-            self.MARGIN = 1.05
+            self.threshold = 0
             #For plotting the screen
             self.max_list, self.scale_fc, self.sample_num = 0, 0, 0
             #Samples: for drawing and threshold calculating
@@ -49,19 +49,20 @@ class Measure(State):
       def accept_ppi_to_list(self, ppi: int):
             if not (250 < ppi < 2000):
                   return
-            #Exclude throughs wihin 0.6 of the previous PPI
-            if self.PPI and ppi < self.PPI[-1]*0.6:
-                  return
             self.hardware.screen.ppi()
             self.PPI.append(ppi)
             self.peak_appended = True
 
       def _find_ppi(self):
-
-            #             O(n) op               O(1) op
-            threshold = (sum(self.samples) / len(self.samples))*1.03#self.MARGIN
-
-            #Rolling average of 5 last
+            
+            if self.sample_num % 125 == 0:
+                  max_val = max(self.samples)
+                  min_val = min(self.samples)
+                  amplitude = max_val - min_val
+                  self.threshold = min_val + amplitude*0.6
+            
+            
+            #Rolling average of 10 last
             data = self.samples[-10:]
             sample = sum(data)/len(data)
 
@@ -69,18 +70,16 @@ class Measure(State):
             sample2 = sum(data2)/len(data2)
 
             #Rising edge detected, appends to PPI list if the value is acceptable
-            if sample > threshold and sample2 - sample <= 0 and not self.edge:
+            if sample > self.threshold and sample2 - sample <= 0 and not self.edge:
                   self.peak_time = time.ticks_ms()
                   self.edge = True
                   self.accept_ppi_to_list(time.ticks_diff(self.peak_time, self.prev_peak_time))
-                  #self.MARGIN = 0.97
                   return
             
             #Falling under threshold with detection flag on, reset.
-            elif sample < threshold and self.edge:
+            elif sample < self.threshold and self.edge:
                   self.prev_peak_time = self.peak_time
                   self.edge = False
-                  #self.MARGIN = 1.05
             return
       
       def display_data(self):
