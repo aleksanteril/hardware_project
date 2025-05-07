@@ -26,17 +26,22 @@ class MeasureHrState(Measure):
       def __enter__(self) -> object:
             self.hardware.screen.set_mode(0)
             self.bpm = 0
+            self.filtered_ppi = []
             return super().__enter__()
 
       def display_data(self):
             Measure.display_data(self)
-            if self.PPI:
-                  self.bpm = round(analysis.mean_hr(self.PPI))
-            self.hardware.screen.hr_bpm(self.bpm)
+            if not self.peak_appended or len(self.PPI) < 5:
+                  return
+            self.peak_appended = False
+            self.filtered_ppi = analysis.preprocess_ppi(self.PPI, percent=0.3)
+            if self.filtered_ppi:
+                  self.bpm = round(analysis.mean_hr(self.filtered_ppi))
+                  self.hardware.screen.hr_bpm(self.bpm)
             return
 
       def run(self, input: int | None) -> object:
-            self.measure(10)
+            self.measure(20)
             self.display_data()
             if input == self.hardware.ROT_PUSH:
                   self.state = MenuState()
@@ -91,6 +96,8 @@ class HrvAnalysisState(Measure):
       def run(self, input: int | None) -> object:
             self.measure(50)
             self.display_data()
+            if not self.peak_appended: #Start counting time when first peak is appended
+                  self.start_time = time.ticks_ms()
             if input == self.hardware.ROT_PUSH:
                   self.state = MenuState()
             elif time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
@@ -150,6 +157,8 @@ class KubiosState(Measure):
       def run(self, input: int | None) -> object:
             self.measure(50)
             self.display_data()
+            if not self.peak_appended: #Start counting time when first peak is appended
+                  self.start_time = time.ticks_ms()
             if not self.hardware.online.is_connected():
                   self.state = ErrorState(['No connection'])
             elif input == self.hardware.ROT_PUSH:
