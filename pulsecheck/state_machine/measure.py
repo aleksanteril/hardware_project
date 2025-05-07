@@ -47,22 +47,25 @@ class Measure(State):
             return
 
       def accept_ppi_to_list(self, ppi: int):
-            if 250 < ppi < 2000:
-                  self.hardware.screen.ppi()
-                  self.PPI.append(ppi)
-                  self.peak_appended = True
-            return
+            if not (250 < ppi < 2000):
+                  return
+            #Exclude throughs wihin 0.6 of the previous PPI
+            if self.PPI and ppi < self.PPI[-1]*0.6:
+                  return
+            self.hardware.screen.ppi()
+            self.PPI.append(ppi)
+            self.peak_appended = True
 
       def _find_ppi(self):
 
             #             O(n) op               O(1) op
-            threshold = (sum(self.samples) / len(self.samples))*1.04#self.MARGIN
+            threshold = (sum(self.samples) / len(self.samples))*1.03#self.MARGIN
 
             #Rolling average of 5 last
-            data = self.samples[-5:]
+            data = self.samples[-10:]
             sample = sum(data)/len(data)
 
-            data2 = self.samples[-10:-5]
+            data2 = self.samples[-20:-10]
             sample2 = sum(data2)/len(data2)
 
             #Rising edge detected, appends to PPI list if the value is acceptable

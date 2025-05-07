@@ -31,7 +31,7 @@ class MeasureHrState(Measure):
 
       def display_data(self):
             Measure.display_data(self)
-            if not self.peak_appended:
+            if not self.peak_appended or len(self.PPI) < 5:
                   return
             self.peak_appended = False
             self.filtered_ppi = analysis.preprocess_ppi(self.PPI, percent=0.3)
