@@ -17,7 +17,8 @@ class Screen(SSD1306_I2C):
             self.width = 128
             self.heigth = 64
             self.empty()
-            self.sleep = sleep
+            self.animation_playing = False #initing these 2 for flag down
+            self.start_animation_done = False
             self.mode = None
             self.hr_plot_pos(-1, 16)
             self.hr_bpm(0)
@@ -65,24 +66,25 @@ class Screen(SSD1306_I2C):
             return
         
         
-      # When device turned on animation will play, then moves to connect state
+      # When device turned on, animation will play, then moves to connect state
       def _draw_start_animation(self):
+            # Can this maybe be put in for i in range (1-6) to loop through frame 1-5 to avoid "toistamista" :D?
             self.bm1 = framebuf.FrameBuffer(bitmaps.frame1, 128, 64, framebuf.MONO_VLSB) #Initializing the bitmap files
             self.bm2 = framebuf.FrameBuffer(bitmaps.frame2, 128, 64, framebuf.MONO_VLSB)
             self.bm3 = framebuf.FrameBuffer(bitmaps.frame3, 128, 64, framebuf.MONO_VLSB)
             self.bm4 = framebuf.FrameBuffer(bitmaps.frame4, 128, 64, framebuf.MONO_VLSB)
             self.bm5 = framebuf.FrameBuffer(bitmaps.frame5, 128, 64, framebuf.MONO_VLSB)
-            self.sequence = [(self.bm1, 0, 0, 0.2), (self.bm2, 0, 0, 0.2), (self.bm3, 0, 0, 0.2), (self.bm4, 0, 0, 0.2), (self.bm5, 0, 0, 1.5)]
-            for frame, x, y, delay in self.sequence:
-                  self.fill(0)
-                  self.blit(frame, x, y)
-                  self.show()
-                  self.sleep(delay)
+            
+            self.sequence = [(self.bm1, 0, 0, 150), (self.bm2, 0, 0, 150), (self.bm3, 0, 0, 150), (self.bm4, 0, 0, 150), (self.bm5, 0, 0, 150)]
+            
+            self.animation_start_time = ticks_ms() #use ticks_ms instead of sleep because sleep can cause issues?
+            self.animation_index = 0 #go through the list by index basis, show frame by frame
+            self.animation_playing = True # raise flag to tell program that animation is playing
 
 
       '''This is a method for core1 to loop and draw correct things requested by core0 through flags'''
       def update(self):
-            with lock:
+            with lock:        
                   if self.empty_request:
                         self.fill(0)
                         self.empty_request = False
@@ -106,8 +108,20 @@ class Screen(SSD1306_I2C):
                         self._draw_dot_animation()
                         self.text(f'{self.dots_str}', 0, 56, 1)
                   elif self.mode == 5:
-                        self._draw_start_animation()
+                        if not self.start_animation_done: # check if animation done
+                              self._draw_start_animation()
+                              self.start_animation_done = True # flag it true so it wont go there again
                         
+                        if self.animation_playing: # only go here if animation currently playing
+                              current_time = ticks_ms() #set current time as ticks_ms()
+                              frame, x, y, delay = self.sequence[self.animation_index] 
+                              if current_time - self.animation_start_time >= delay: # loop through the animation list
+                                    self.fill(0)
+                                    self.blit(frame, x, y)
+                                    self.animation_start_time = current_time
+                                    self.animation_index += 1 # raise index so it can draw the next frame
+                                    if self.animation_index >= len(self.sequence):
+                                        self.animation_playing = False #drop flag to tell program that animation is over                        
 
             #Buggy shit, use this to keep from crashing still :(
             try:
