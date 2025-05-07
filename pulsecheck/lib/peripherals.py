@@ -68,11 +68,11 @@ class Screen(SSD1306_I2C):
                   self.ppi_flag = False
             return
 
-      def _draw_dot_animation(self):
-            if ticks_diff(ticks_ms(), self.last_draw) < 100:
+      def _draw_dot_animation(self, length: int):
+            if ticks_diff(ticks_ms(), self.last_draw) < 150:
                   return
             self.dots_str += '.'
-            if len(self.dots_str) > 4:
+            if len(self.dots_str) > length:
                   self.fill_rect(0, 46, 128, 18, 0)
                   self.dots_str = ''
             self.last_draw = ticks_ms()
@@ -109,14 +109,14 @@ class Screen(SSD1306_I2C):
 
                   elif self.mode == 2:
                         self._draw_measure()
-                        self._draw_dot_animation()
+                        self._draw_dot_animation(3)
                         self.text(f'Analysing {self.dots_str}', 0, 56, 1)
 
                   elif self.mode == 3:
                         pass
 
                   elif self.mode == 4:
-                        self._draw_dot_animation()
+                        self._draw_dot_animation(3)
                         self.text(f'{self.dots_str}', 0, 56, 1)
 
                   elif self.mode == 5:
