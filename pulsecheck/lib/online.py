@@ -2,6 +2,7 @@ import network
 import ntptime
 from time import sleep_ms
 import ujson
+from utility import set_timezone
 from umqtt.simple import MQTTClient
 
 '''This file contains the Online object, no sleeps or loops are used to keep the state machine running'''
@@ -52,6 +53,7 @@ class Online:
         try:
             ntptime.host = "fi.pool.ntp.org"
             ntptime.settime()
+            set_timezone(3)
         except:
             print('Time server not reached, time not in sync')
         
