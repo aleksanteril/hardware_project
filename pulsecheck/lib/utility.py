@@ -1,4 +1,5 @@
 from time import localtime, mktime
+from machine import RTC
 import re
 
 def format_filenames(files: list) -> list:
@@ -68,3 +69,13 @@ def read_wifi_file() -> dict:
                   match = re.search('(\w+)=(.+)\r\n', line)
                   parameters[match.groups()[0]] = match.groups()[1]
       return parameters
+
+def set_timezone(timezone: int):
+      
+      #Get current time tuple, change the 3rd index
+      tm = list(localtime())
+      tm[3] = tm[3] + timezone
+      tm = tuple(tm)
+      #Back to tuple and set time
+      RTC().datetime((tm[0], tm[1], tm[2], tm[6], tm[3], tm[4], tm[5], 0))
+      return
