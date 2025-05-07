@@ -1,11 +1,10 @@
-
 from fifo import Fifo
 from machine import Pin, I2C, ADC
 from ssd1306 import SSD1306_I2C
-from time import ticks_diff, ticks_ms, sleep_ms, sleep
+from time import ticks_diff, ticks_ms, sleep_ms
 from piotimer import Piotimer
 import _thread, framebuf
-from animation import bitmaps
+from animation import logo
 
 '''Lock for multithreading'''
 lock = _thread.allocate_lock()
@@ -13,21 +12,32 @@ lock = _thread.allocate_lock()
 '''This file contains all the I/O hardware peripherals for the project and their interfaces'''
 class Screen(SSD1306_I2C):
       def __init__(self, da: int, cl: int):
+
+            #I2C init
             i2c = I2C(1, sda=Pin(da), scl=Pin(cl), freq=400000)
             self.width = 128
             self.heigth = 64
+
             self.empty()
-            self.animation_playing = False #initing these 2 for flag down
-            self.start_animation_done = False
+            #Core1 draw mode
             self.mode = None
+
+            #Animation variables
+            self.anim_index = 0
+            self.last_draw = ticks_ms()
+            self.dots_str = ''
+
+            #Measuring draw variables
             self.hr_plot_pos(-1, 16)
             self.hr_bpm(0)
-            self.empty()
+            self.y_old = 0
             self.ppi_flag = False
+
+            #Menu and/or static view items variables
             self.items_request = False
             self.cursor_pos(0)
-            self.dots_str = ''
-            self.y_old = 0
+
+            #Screen init
             super().__init__(self.width, self.heigth, i2c)
             
       def _draw_hr(self): # -2 and -1 offset to fix refresh bar issue
@@ -59,27 +69,23 @@ class Screen(SSD1306_I2C):
             return
 
       def _draw_dot_animation(self):
+            if ticks_diff(ticks_ms(), self.last_draw) < 100:
+                  return
             self.dots_str += '.'
             if len(self.dots_str) > 4:
                   self.fill_rect(0, 46, 128, 18, 0)
                   self.dots_str = ''
+            self.last_draw = ticks_ms()
             return
         
-        
-      # When device turned on, animation will play, then moves to connect state
       def _draw_start_animation(self):
-            # Can this maybe be put in for i in range (1-6) to loop through frame 1-5 to avoid "toistamista" :D?
-            self.bm1 = framebuf.FrameBuffer(bitmaps.frame1, 128, 64, framebuf.MONO_VLSB) #Initializing the bitmap files
-            self.bm2 = framebuf.FrameBuffer(bitmaps.frame2, 128, 64, framebuf.MONO_VLSB)
-            self.bm3 = framebuf.FrameBuffer(bitmaps.frame3, 128, 64, framebuf.MONO_VLSB)
-            self.bm4 = framebuf.FrameBuffer(bitmaps.frame4, 128, 64, framebuf.MONO_VLSB)
-            self.bm5 = framebuf.FrameBuffer(bitmaps.frame5, 128, 64, framebuf.MONO_VLSB)
-            
-            self.sequence = [(self.bm1, 0, 0, 150), (self.bm2, 0, 0, 150), (self.bm3, 0, 0, 150), (self.bm4, 0, 0, 150), (self.bm5, 0, 0, 150)]
-            
-            self.animation_start_time = ticks_ms() #use ticks_ms instead of sleep because sleep can cause issues?
-            self.animation_index = 0 #go through the list by index basis, show frame by frame
-            self.animation_playing = True # raise flag to tell program that animation is playing
+            if ticks_diff(ticks_ms(), self.last_draw) < 200:
+                  return
+            #Get the new frame from anim frames list
+            self.frame = framebuf.FrameBuffer(logo.frames[self.anim_index], self.width, self.heigth, framebuf.MONO_VLSB)
+            self.blit(self.frame, 0, 0)
+            self.anim_index = (self.anim_index + 1) % len(logo.frames)
+            self.last_draw = ticks_ms()
 
 
       '''This is a method for core1 to loop and draw correct things requested by core0 through flags'''
@@ -88,6 +94,7 @@ class Screen(SSD1306_I2C):
                   if self.empty_request:
                         self.fill(0)
                         self.empty_request = False
+                        
                   elif self.items_request:
                         self._draw_items()
                         self.items_request = False
@@ -96,32 +103,24 @@ class Screen(SSD1306_I2C):
                   elif self.mode == 0:
                         self._draw_measure()
                         self._draw_bpm()
+
                   elif self.mode == 1:
                         self._draw_cursor()
+
                   elif self.mode == 2:
                         self._draw_measure()
                         self._draw_dot_animation()
                         self.text(f'Analysing {self.dots_str}', 0, 56, 1)
+
                   elif self.mode == 3:
                         pass
+
                   elif self.mode == 4:
                         self._draw_dot_animation()
                         self.text(f'{self.dots_str}', 0, 56, 1)
+
                   elif self.mode == 5:
-                        if not self.start_animation_done: # check if animation done
-                              self._draw_start_animation()
-                              self.start_animation_done = True # flag it true so it wont go there again
-                        
-                        if self.animation_playing: # only go here if animation currently playing
-                              current_time = ticks_ms() #set current time as ticks_ms()
-                              frame, x, y, delay = self.sequence[self.animation_index] 
-                              if current_time - self.animation_start_time >= delay: # loop through the animation list
-                                    self.fill(0)
-                                    self.blit(frame, x, y)
-                                    self.animation_start_time = current_time
-                                    self.animation_index += 1 # raise index so it can draw the next frame
-                                    if self.animation_index >= len(self.sequence):
-                                        self.animation_playing = False #drop flag to tell program that animation is over                        
+                        self._draw_start_animation()
 
             #Buggy shit, use this to keep from crashing still :(
             try:
