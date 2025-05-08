@@ -48,7 +48,10 @@ class Screen(SSD1306_I2C):
 
       def _draw_bpm(self):
             self.fill_rect(64, 46, 64, 18, 0)
-            self.text(f"avg BPM: {self.bpm}", 0, 56, 1)
+            if self.bpm == 0:
+                  self.text(f"avg BPM: --", 0, 56, 1)
+            else:
+                  self.text(f"avg BPM: {self.bpm}", 0, 56, 1)
             return
       
       def _draw_items(self):
