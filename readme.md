@@ -6,6 +6,8 @@ This device was developed as part of the Metropolia UAS hardware 1 & 2 courses. 
 
 ---
 ### Good to know
+Remember to pull the dependant pico-lib submodule with the command `git submodule update --init`
+
 The device can be connected to a WI-FI and a MQTT broker by editing the config in settings.txt. Original device was a Raspberry Pi Pico using a custom protoboard with hardware peripherals made by Metropolia
 
 ---
