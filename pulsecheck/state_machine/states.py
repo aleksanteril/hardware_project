@@ -5,6 +5,19 @@ from lib import utility, analysis # type: ignore
 
 
 ##State machine states start here
+class LogoState(State):
+      def __enter__(self) -> object:
+            self.start_time = time.ticks_ms()
+            self.timeout = 4000 #ms this value can be changed to adjust the time logo will show 
+            self.hardware.screen.set_mode(5)
+            return super().__enter__()
+      
+      def run(self, input: int | None) -> object:
+            if time.ticks_diff(time.ticks_ms(), self.start_time) > self.timeout:
+                  self.state = ConnectState()
+            return self.state
+
+
 class ErrorState(State):
       def __init__(self, message: list):
             self.error = ['ERROR']

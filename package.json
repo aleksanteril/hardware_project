@@ -16,7 +16,8 @@
         ["lib/online.py", "http://localhost:8000/pulsecheck/lib/online.py"],
         ["state_machine/template_state.py", "http://localhost:8000/pulsecheck/state_machine/template_state.py"],
         ["state_machine/measure.py", "http://localhost:8000/pulsecheck/state_machine/measure.py"],
-        ["state_machine/states.py", "http://localhost:8000/pulsecheck/state_machine/states.py"]
+        ["state_machine/states.py", "http://localhost:8000/pulsecheck/state_machine/states.py"],
+        ["animation/logo.py", "http://localhost:8000/pulsecheck/animation/logo.py"]
       ],
       "deps": [
       ],
